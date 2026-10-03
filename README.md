@@ -6,8 +6,8 @@ Live site: https://www.malathi.dev/tandem-game/
 
 ## How to play
 
-1. One player chooses "Create a game", picks the language they are learning, and shares the 5-character code.
-2. The other chooses "Join a game", enters the code, and picks the language they are learning.
+1. One player chooses "Create a game", picks the language they are learning, and sends their partner the invite link (or the 5-character code).
+2. The other opens the link (or chooses "Join a game" and enters the code) and picks the language they are learning.
 3. The host picks a topic (modal verbs, conjunctions, or their own). Then you take turns: you each get two sentences in your own language to translate aloud into the language you are learning, and your partner judges. Be on a call or in the same room, because translations are spoken, not typed.
 
 ## Development

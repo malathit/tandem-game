@@ -16,11 +16,15 @@ type Stage =
 interface OnlineGameProps {
   network: Network
   languages: Language[]
+  /** A valid game code from an invite link: join that game straight away. */
+  initialCode?: string
 }
 
 /** Walks the players from creating or joining a game, through to playing it. */
-export function OnlineGame({ network, languages }: OnlineGameProps) {
-  const [stage, setStage] = useState<Stage>({ kind: 'menu' })
+export function OnlineGame({ network, languages, initialCode }: OnlineGameProps) {
+  const [stage, setStage] = useState<Stage>(
+    initialCode ? { kind: 'guest', code: initialCode, attempt: 1 } : { kind: 'menu' },
+  )
   const toMenu = () => setStage({ kind: 'menu' })
 
   switch (stage.kind) {

@@ -146,6 +146,32 @@ describe('playing a whole round on two devices', () => {
   })
 })
 
+describe('invite links', () => {
+  it('shows the host a link that carries the game code', async () => {
+    const user = userEvent.setup()
+    const host = await createGame(createMemoryNetwork(), user)
+    expect(host.ui.getByLabelText('Invite link')).toHaveDisplayValue(new RegExp(`\\?join=${host.code}$`))
+    expect(host.ui.getByRole('button', { name: 'Copy invite link' })).toBeInTheDocument()
+  })
+
+  it('joins straight away when opened with a code, then asks for the language', async () => {
+    const user = userEvent.setup()
+    const network = createMemoryNetwork()
+    const host = await createGame(network, user)
+
+    const view = render(<OnlineGame network={network} languages={languages} initialCode={host.code} />)
+    const guest = within(view.container)
+    await user.selectOptions(await guest.findByLabelText('I am learning'), 'de')
+    await user.click(guest.getByRole('button', { name: 'Continue' }))
+    await host.ui.findByRole('button', { name: 'Modal verbs' })
+  })
+
+  it('starts on the menu when there is no code', () => {
+    const view = render(<OnlineGame network={createMemoryNetwork()} languages={languages} />)
+    expect(within(view.container).getByRole('button', { name: 'Create a game' })).toBeInTheDocument()
+  })
+})
+
 describe('progress steps', () => {
   it('move from Connect to Topic to Play on both devices', async () => {
     const user = userEvent.setup()

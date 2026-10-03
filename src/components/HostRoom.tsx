@@ -5,6 +5,8 @@ import { buildTurns } from '../game/buildTurns'
 import { topicName } from '../game/topicName'
 import type { Network } from '../online/network'
 import { useHostSession } from '../online/useHostSession'
+import { buildInviteUrl } from '../online/inviteLink'
+import { InviteLink } from './InviteLink'
 import { PlayerChips } from './PlayerChips'
 import { StepIndicator } from './StepIndicator'
 import { TopicPicker } from './TopicPicker'
@@ -44,8 +46,9 @@ export function HostRoom({ network, languages, hostLearning, onLeave }: HostRoom
       return (
         <section className="card">
           <h2>Invite your partner</h2>
-          <p>Ask your partner to choose “Join a game” and enter this code:</p>
+          <p>Send your partner this link, or ask them to choose “Join a game” and enter this code:</p>
           <p className="room-code">{code}</p>
+          {code !== null && <InviteLink url={buildInviteUrl(code, window.location.href)} />}
           <p role="status">
             {partnerConnected
               ? 'Your partner is connected. Waiting for them to choose a language…'

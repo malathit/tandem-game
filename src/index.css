@@ -284,6 +284,30 @@ progress {
   user-select: all;
 }
 
+.invite {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.invite input {
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+}
+
+.invite-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.invite-actions button {
+  flex: 1;
+}
+
+.invite-actions .primary {
+  width: auto;
+}
+
 /* Forms and buttons */
 
 form {
