@@ -14,6 +14,8 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: SITE_URL,
+    // A trace shows a screenshot of every step; kept only for failures, which are all that is uploaded.
     trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
   },
 })

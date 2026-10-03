@@ -47,6 +47,6 @@ jobs:
         run: |
           {
             echo "### End-to-end tests failed"
-            echo "- [Download the Playwright report and traces]($REPORT_URL). Unzip it, then run \`npx playwright show-report playwright-report\` or \`npx playwright show-trace test-results/<test>/trace.zip\`."
+            echo "- [Download the Playwright report and traces]($REPORT_URL). Unzip it, then run \`npx playwright show-report playwright-report\`, open a test and its trace to step through every action with screenshots. Or run \`npx playwright show-trace test-results/<test>/trace.zip\`."
             echo "- [All runs of this workflow]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/workflows/e2e.yml)"
           } >> "$GITHUB_STEP_SUMMARY"
