@@ -3,6 +3,7 @@ import { staticSource } from '../content/staticSource'
 import type { Language, LanguageCode } from '../content/types'
 import type { SentenceGenerator } from '../generation/generator'
 import type { GenerateTopic, RoundOptions } from '../generation/types'
+import { learningPair } from '../game/learningPair'
 import { topicName } from '../game/topicName'
 import { useRoundSetup } from '../game/useRoundSetup'
 import type { Network } from '../online/network'
@@ -23,7 +24,7 @@ const topicText = (topic: GenerateTopic) => (topic.kind === 'preset' ? topic.id 
 interface HostRoomProps {
   network: Network
   languages: Language[]
-  hostLearning: LanguageCode
+  hostKnows: LanguageCode
   /** The topic and options the host set before the game was opened; its sentences are written once the partner is in. */
   firstRound: { topic: string; options: RoundOptions }
   /** Where the AI's sentences come from; without it there is nothing to play. */
@@ -32,18 +33,18 @@ interface HostRoomProps {
 }
 
 /** The device that created the game: it is Player 1 and runs the game for both. */
-export function HostRoom({ network, languages, hostLearning, firstRound, generator, onLeave }: HostRoomProps) {
+export function HostRoom({ network, languages, hostKnows, firstRound, generator, onLeave }: HostRoomProps) {
   // The guest can ask for new sentences, but the request is made from here, so the session calls back.
   const guestRegenerate = useRef(() => {})
   const { status, code, room, partnerConnected, dispatch } = useHostSession(
     network,
-    hostLearning,
+    hostKnows,
     () => guestRegenerate.current(),
     firstRound.topic,
     generator !== undefined,
   )
-  const { guestLearning, round } = room
-  const pair = guestLearning === null ? null : ([room.hostLearning, guestLearning] as const)
+  const { guestKnows, round } = room
+  const pair = guestKnows === null ? null : learningPair(room.hostKnows, guestKnows)
   const setup = useRoundSetup(pair, generator)
   const { state: setupState, back: backToTopics } = setup
   const [options, setOptions] = useState(firstRound.options)

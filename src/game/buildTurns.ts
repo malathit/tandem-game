@@ -26,7 +26,7 @@ export const shuffled: Shuffle = (items) => {
 
 /**
  * Builds the turns of one round, alternating Player 1 and Player 2.
- * `pair` is [language Player 1 is learning, language Player 2 is learning], so
+ * `pair` is [language Player 1 is learning, language Player 2 is learning] (see `learningPair`), so
  * Player 1 reads sentences in `pair[1]` (their native language) and vice versa.
  * Each player gets `perPlayer` turns, fewer if a sentence list is shorter.
  */

@@ -5,7 +5,7 @@ import type { GenerationErrorKind } from '../generation/types'
 import type { RoomState } from './protocol'
 
 export type RoomEvent =
-  | { type: 'GUEST_HELLO'; learning: LanguageCode }
+  | { type: 'GUEST_HELLO'; knows: LanguageCode }
   /** The host's view of the sentences being generated or reviewed. */
   | { type: 'REVIEW_UPDATED'; topic: string; turns: Turn[]; busy: boolean; error: GenerationErrorKind | null }
   | { type: 'REVIEW_CLOSED' }
@@ -22,9 +22,9 @@ export type RoomEvent =
  * already failed), so the guest's first view after joining says what is happening instead of waiting for a choice
  * the host has already made.
  */
-export const createRoom = (hostLearning: LanguageCode, firstTopic?: string, canGenerate = true): RoomState => ({
-  hostLearning,
-  guestLearning: null,
+export const createRoom = (hostKnows: LanguageCode, firstTopic?: string, canGenerate = true): RoomState => ({
+  hostKnows,
+  guestKnows: null,
   review:
     firstTopic === undefined
       ? null
@@ -43,11 +43,11 @@ export const createRoom = (hostLearning: LanguageCode, firstTopic?: string, canG
 export function roomReducer(state: RoomState, event: RoomEvent): RoomState {
   switch (event.type) {
     case 'GUEST_HELLO':
-      if (state.guestLearning !== null || event.learning === state.hostLearning) return state
-      return { ...state, guestLearning: event.learning }
+      if (state.guestKnows !== null || event.knows === state.hostKnows) return state
+      return { ...state, guestKnows: event.knows }
 
     case 'REVIEW_UPDATED': {
-      if (state.guestLearning === null || state.round !== null) return state
+      if (state.guestKnows === null || state.round !== null) return state
       const { review } = state
       const { topic, turns, busy, error } = event
       if (review && review.topic === topic && review.turns === turns && review.busy === busy && review.error === error) {
@@ -79,7 +79,7 @@ export function roomReducer(state: RoomState, event: RoomEvent): RoomState {
       return { ...state, review: { ...state.review, confirmed: [state.review.confirmed[0], false] } }
 
     case 'START_ROUND':
-      if (state.guestLearning === null || event.turns.length === 0) return state
+      if (state.guestKnows === null || event.turns.length === 0) return state
       return { ...state, review: null, round: { topic: event.topic, game: createGame(event.turns) } }
 
     case 'CHANGE_TOPIC':

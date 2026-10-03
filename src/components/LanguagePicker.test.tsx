@@ -14,13 +14,13 @@ function setup(exclude?: LanguageCode) {
   render(
     <LanguagePicker
       languages={languages}
-      label="I am learning"
+      label="I speak"
       submitLabel="Create game"
       exclude={exclude}
       onSubmit={onSubmit}
     />,
   )
-  return { onSubmit, user: userEvent.setup(), select: screen.getByLabelText('I am learning') }
+  return { onSubmit, user: userEvent.setup(), select: screen.getByLabelText('I speak') }
 }
 
 describe('LanguagePicker', () => {

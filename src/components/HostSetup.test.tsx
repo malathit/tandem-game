@@ -35,29 +35,29 @@ describe('HostSetup', () => {
     expect(create).toBeDisabled() // still no language
     expect(screen.queryByText('Choose a topic to create the game.')).not.toBeInTheDocument()
 
-    await user.selectOptions(screen.getByLabelText('I am learning'), 'en')
+    await user.selectOptions(screen.getByLabelText('I speak'), 'en')
     expect(create).toBeEnabled()
     expect(onCreate).not.toHaveBeenCalled()
   })
 
   it('creates the game with a preset topic and the default options', async () => {
     const { user, create, onCreate } = setup()
-    await user.selectOptions(screen.getByLabelText('I am learning'), 'en')
+    await user.selectOptions(screen.getByLabelText('I speak'), 'en')
     await user.click(screen.getByRole('button', { name: 'Weather' }))
     await user.click(create)
-    expect(onCreate).toHaveBeenCalledExactlyOnceWith({ learning: 'en', topic: 'weather', options: DEFAULT_ROUND_OPTIONS })
+    expect(onCreate).toHaveBeenCalledExactlyOnceWith({ knows: 'en', topic: 'weather', options: DEFAULT_ROUND_OPTIONS })
   })
 
   it('creates the game with the options the host chose', async () => {
     const { user, create, onCreate } = setup()
-    await user.selectOptions(screen.getByLabelText('I am learning'), 'de')
+    await user.selectOptions(screen.getByLabelText('I speak'), 'de')
     await user.selectOptions(screen.getByLabelText('Sentences per player'), '4')
     await user.selectOptions(screen.getByLabelText('Difficulty'), 'hard')
     await user.click(screen.getByLabelText('Show the translation after each turn'))
     await user.click(screen.getByRole('button', { name: 'Greetings and small talk' }))
     await user.click(create)
     expect(onCreate).toHaveBeenCalledExactlyOnceWith({
-      learning: 'de',
+      knows: 'de',
       topic: 'greetings',
       options: { count: 4, translate: true, difficulty: 'hard' },
     })
@@ -77,17 +77,17 @@ describe('HostSetup', () => {
 
   it('takes a custom topic, trimmed, and lets typing replace a chosen preset', async () => {
     const { user, create, custom, onCreate } = setup()
-    await user.selectOptions(screen.getByLabelText('I am learning'), 'en')
+    await user.selectOptions(screen.getByLabelText('I speak'), 'en')
     await user.click(screen.getByRole('button', { name: 'Weather' }))
     await user.type(custom, '  my pet dragon  ')
     expect(screen.getByRole('button', { name: 'Weather' })).toHaveAttribute('aria-pressed', 'false')
     await user.click(create)
-    expect(onCreate).toHaveBeenCalledExactlyOnceWith({ learning: 'en', topic: 'my pet dragon', options: DEFAULT_ROUND_OPTIONS })
+    expect(onCreate).toHaveBeenCalledExactlyOnceWith({ knows: 'en', topic: 'my pet dragon', options: DEFAULT_ROUND_OPTIONS })
   })
 
   it('lets choosing a preset replace what was typed', async () => {
     const { user, create, custom, onCreate } = setup()
-    await user.selectOptions(screen.getByLabelText('I am learning'), 'en')
+    await user.selectOptions(screen.getByLabelText('I speak'), 'en')
     await user.type(custom, 'my pet dragon')
     await user.click(screen.getByRole('button', { name: 'Weather' }))
     expect(custom).toHaveValue('')
@@ -97,7 +97,7 @@ describe('HostSetup', () => {
 
   it('treats a blank custom topic as no topic', async () => {
     const { user, create, custom, onCreate } = setup()
-    await user.selectOptions(screen.getByLabelText('I am learning'), 'en')
+    await user.selectOptions(screen.getByLabelText('I speak'), 'en')
     await user.type(custom, '    ')
     expect(create).toBeDisabled()
     await user.type(custom, '{Enter}')
@@ -106,7 +106,7 @@ describe('HostSetup', () => {
 
   it('clears the topic again when the typed text is deleted', async () => {
     const { user, create, custom } = setup()
-    await user.selectOptions(screen.getByLabelText('I am learning'), 'en')
+    await user.selectOptions(screen.getByLabelText('I speak'), 'en')
     await user.type(custom, 'dragons')
     expect(create).toBeEnabled()
     await user.clear(custom)

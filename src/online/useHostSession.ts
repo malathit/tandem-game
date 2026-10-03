@@ -23,7 +23,7 @@ const ignore = () => {}
  */
 export function useHostSession(
   network: Network,
-  hostLearning: LanguageCode,
+  hostKnows: LanguageCode,
   /** The guest asked for new sentences; only the host's device can call the AI. */
   onGuestRegenerate: () => void = ignore,
   /** The topic whose sentences are written as soon as the guest has joined, if any. */
@@ -31,7 +31,7 @@ export function useHostSession(
   /** False in a build without AI: the guest is then told the sentences cannot be written. */
   canGenerate = true,
 ): HostSession {
-  const [room, dispatch] = useReducer(roomReducer, undefined, () => createRoom(hostLearning, firstTopic, canGenerate))
+  const [room, dispatch] = useReducer(roomReducer, undefined, () => createRoom(hostKnows, firstTopic, canGenerate))
   const [status, setStatus] = useState<HostSession['status']>('opening')
   const [code, setCode] = useState<string | null>(null)
   const [partnerConnected, setPartnerConnected] = useState(false)
@@ -54,7 +54,7 @@ export function useHostSession(
       connection.onMessage((raw) => {
         const message = parseGuestMessage(raw)
         if (message?.type === 'hello') {
-          dispatch({ type: 'GUEST_HELLO', learning: message.learning })
+          dispatch({ type: 'GUEST_HELLO', knows: message.knows })
         } else if (message?.type === 'confirm') {
           dispatch({ type: 'CONFIRM', from: 2 })
         } else if (message?.type === 'regenerate') {

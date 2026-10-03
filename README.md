@@ -6,8 +6,8 @@ Live site: https://www.malathi.dev/tandem-game/
 
 ## How to play
 
-1. One player chooses "Create a game", picks the language they are learning, and sets up the round: a topic (one of ten everyday ones, or their own), how many sentences each player gets (1 to 5), the difficulty, and whether translations are shown after each turn.
-2. They send their partner the invite link (or the 5-character code). The partner joins and picks their language.
+1. One player chooses "Create a game", picks the language they speak, and sets up the round: a topic (one of ten everyday ones, or their own), how many sentences each player gets (1 to 5), the difficulty, and whether translations are shown after each turn.
+2. They send their partner the invite link (or the 5-character code). The partner joins and picks the language they speak; each of you then learns the other's language.
 3. An AI writes the sentences. Each player reviews the ones they will read aloud (in their own language) and either can ask for new ones. The round starts when both tap "Looks good".
 4. Take turns translating aloud; your partner judges. With translations on, the speaker taps "Show translation" when done, or "Next turn" to skip it.
 

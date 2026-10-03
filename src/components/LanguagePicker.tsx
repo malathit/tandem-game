@@ -5,7 +5,7 @@ interface LanguagePickerProps {
   languages: Language[]
   label: string
   submitLabel: string
-  /** A language that cannot be chosen, e.g. the one the partner is already learning. */
+  /** A language that cannot be chosen, e.g. the one the partner already speaks. */
   exclude?: LanguageCode
   /** More form fields, shown between the language and the submit button. */
   children?: ReactNode

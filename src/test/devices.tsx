@@ -46,7 +46,7 @@ export async function chooseRound(device: ReturnType<typeof open>, user: User, c
 }
 
 /**
- * A device that creates a game, learning English, with the topic and options in `choices`
+ * A device that creates a game, speaking German (so learning English), with the topic and options in `choices`
  * (a preset topic and the default options unless said otherwise). Resolves once the code is shown.
  * It gets a generator that answers at once; pass `null` for a build without AI.
  */
@@ -58,7 +58,7 @@ export async function createGame(
 ) {
   const device = open(network, generator ?? undefined)
   await user.click(device.ui.getByRole('button', { name: 'Create a game' }))
-  await user.selectOptions(device.ui.getByLabelText('I am learning'), 'en')
+  await user.selectOptions(device.ui.getByLabelText('I speak'), 'de')
   await chooseRound(device, user, choices)
   await user.click(device.ui.getByRole('button', { name: 'Create game' }))
   const code = (await device.ui.findByText(/^[A-Z2-9]{5}$/)).textContent ?? ''
@@ -73,10 +73,10 @@ export async function startJoining(network: MemoryNetwork, user: User, code: str
   return device
 }
 
-/** A device that joins and picks German, ending on the "waiting for the host" screen. */
+/** A device that joins and picks English (so it learns German), ending on the "waiting for the host" screen. */
 export async function joinGame(network: MemoryNetwork, user: User, code: string) {
   const device = await startJoining(network, user, code)
-  await user.selectOptions(await device.ui.findByLabelText('I am learning'), 'de')
+  await user.selectOptions(await device.ui.findByLabelText('I speak'), 'en')
   await user.click(device.ui.getByRole('button', { name: 'Continue' }))
   return device
 }

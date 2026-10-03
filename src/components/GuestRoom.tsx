@@ -1,5 +1,6 @@
 import { staticSource } from '../content/staticSource'
 import type { Language } from '../content/types'
+import { learningPair } from '../game/learningPair'
 import { topicName } from '../game/topicName'
 import type { Network } from '../online/network'
 import { useGuestSession, type GuestSession } from '../online/useGuestSession'
@@ -57,9 +58,9 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
       )
     }
 
-    const { guestLearning, round } = room
-    if (guestLearning === null) {
-      const hostLanguage = languages.find((l) => l.code === room.hostLearning)?.name ?? room.hostLearning
+    const { guestKnows, round } = room
+    if (guestKnows === null) {
+      const hostLanguage = languages.find((l) => l.code === room.hostKnows)?.name ?? room.hostKnows
       return (
         <>
           <p className="notice joined" role="status">
@@ -67,12 +68,12 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
           </p>
           <section className="card">
             <h2>Choose your language</h2>
-            <p>Your partner is learning {hostLanguage}. Which language are you learning?</p>
+            <p>Your partner speaks {hostLanguage}. Which language do you speak?</p>
             <LanguagePicker
               languages={languages}
-              label="I am learning"
+              label="I speak"
               submitLabel="Continue"
-              exclude={room.hostLearning}
+              exclude={room.hostKnows}
               onSubmit={chooseLanguage}
             />
           </section>
@@ -80,7 +81,7 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
       )
     }
 
-    const pair = [room.hostLearning, guestLearning] as const
+    const pair = learningPair(room.hostKnows, guestKnows)
     if (round === null) {
       const { review } = room
       return (
@@ -115,7 +116,7 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
     )
   }
 
-  const step = room === null || room.guestLearning === null ? 1 : room.round === null ? 2 : 3
+  const step = room === null || room.guestKnows === null ? 1 : room.round === null ? 2 : 3
 
   return (
     <>

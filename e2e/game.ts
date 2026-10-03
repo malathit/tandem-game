@@ -24,7 +24,7 @@ export interface Settings {
 }
 
 /**
- * Two separate browsers' worth of state: a host learning English and a guest learning German, connected.
+ * Two separate browsers' worth of state: a host speaking German (learning English) and a guest speaking English (learning German), connected.
  * The host sets the topic and options first; once the guest has joined, the sentences are asked for at once,
  * so `ready` runs on the host's page before the guest joins, for anything that must be in place by then.
  */
@@ -32,7 +32,7 @@ export async function startGame(browser: Browser, settings: Settings = {}, ready
   const host = await (await browser.newContext()).newPage()
   await host.goto(SITE_URL)
   await host.getByRole('button', { name: 'Create a game' }).click()
-  await host.getByLabel('I am learning').selectOption('en')
+  await host.getByLabel('I speak').selectOption('de')
   if (settings.count !== undefined) await host.getByLabel('Sentences per player').selectOption(String(settings.count))
   if (settings.difficulty !== undefined) await host.getByLabel('Difficulty').selectOption(settings.difficulty)
   if (settings.translate) await host.getByLabel('Show the translation after each turn').check()
@@ -48,10 +48,10 @@ export async function startGame(browser: Browser, settings: Settings = {}, ready
   const guest = await (await browser.newContext()).newPage()
   await guest.goto(`${SITE_URL}?join=${code}`)
   // Connecting goes through the public PeerJS broker, so allow it some time; on failure, show what the guest saw.
-  await expect(guest.getByLabel('I am learning'), `the guest's screen: ${await guest.locator('main').innerText()}`).toBeVisible({
+  await expect(guest.getByLabel('I speak'), `the guest's screen: ${await guest.locator('main').innerText()}`).toBeVisible({
     timeout: 30_000,
   })
-  await guest.getByLabel('I am learning').selectOption('de')
+  await guest.getByLabel('I speak').selectOption('en')
   await guest.getByRole('button', { name: 'Continue' }).click()
 
   // The host's review only starts once the guest's choice has travelled over the real connection.

@@ -7,7 +7,7 @@ export interface GuestSession {
   status: 'connecting' | 'connected' | 'lost' | 'not-found' | 'unavailable'
   /** The host's latest copy of the game; null until the first one arrives. */
   room: RoomState | null
-  chooseLanguage: (learning: LanguageCode) => void
+  chooseLanguage: (knows: LanguageCode) => void
   /** Says the sentences this player will read are fine. */
   confirm: () => void
   /** Asks the host for new sentences. */
@@ -60,7 +60,7 @@ export function useGuestSession(network: Network, code: string): GuestSession {
   return {
     status,
     room,
-    chooseLanguage: useCallback((learning) => send({ type: 'hello', learning }), [send]),
+    chooseLanguage: useCallback((knows) => send({ type: 'hello', knows }), [send]),
     confirm: useCallback(() => send({ type: 'confirm' }), [send]),
     regenerate: useCallback(() => send({ type: 'regenerate' }), [send]),
     nextTurn: useCallback(() => send({ type: 'next-turn' }), [send]),

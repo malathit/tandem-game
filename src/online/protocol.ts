@@ -17,9 +17,9 @@ export interface ReviewState {
 
 /** Everything both devices need to show the same screen. The host owns it. */
 export interface RoomState {
-  hostLearning: LanguageCode
+  hostKnows: LanguageCode
   /** null until the guest has chosen their language. */
-  guestLearning: LanguageCode | null
+  guestKnows: LanguageCode | null
   /** The sentences being checked; null unless the host has chosen a topic and no round is running. */
   review: ReviewState | null
   /** null while the host is choosing a topic or the players are reviewing. */
@@ -29,7 +29,7 @@ export interface RoomState {
 export type HostMessage = { type: 'state'; state: RoomState }
 
 export type GuestMessage =
-  | { type: 'hello'; learning: LanguageCode }
+  | { type: 'hello'; knows: LanguageCode }
   | { type: 'confirm' }
   | { type: 'regenerate' }
   | { type: 'next-turn' }
@@ -112,13 +112,13 @@ function parseReview(raw: unknown): ReviewState | null {
 }
 
 function parseRoomState(raw: unknown): RoomState | null {
-  if (!isRecord(raw) || !isLanguageCode(raw.hostLearning)) return null
-  const { guestLearning, round } = raw
-  if (guestLearning !== null && !isLanguageCode(guestLearning)) return null
+  if (!isRecord(raw) || !isLanguageCode(raw.hostKnows)) return null
+  const { guestKnows, round } = raw
+  if (guestKnows !== null && !isLanguageCode(guestKnows)) return null
   // A host that has not been updated yet sends no review, which means there is none.
   const review = raw.review === undefined || raw.review === null ? null : parseReview(raw.review)
   if (raw.review !== undefined && raw.review !== null && review === null) return null
-  const common = { hostLearning: raw.hostLearning, guestLearning, review }
+  const common = { hostKnows: raw.hostKnows, guestKnows, review }
   if (round === null) return { ...common, round: null }
   if (!isRecord(round) || !isText(round.topic)) return null
   const game = parseGame(round.game)
@@ -137,8 +137,8 @@ export function parseGuestMessage(raw: unknown): GuestMessage | null {
   if (raw.type === 'reveal') return { type: 'reveal' }
   if (raw.type === 'confirm') return { type: 'confirm' }
   if (raw.type === 'regenerate') return { type: 'regenerate' }
-  if (raw.type === 'hello' && isLanguageCode(raw.learning)) {
-    return { type: 'hello', learning: raw.learning }
+  if (raw.type === 'hello' && isLanguageCode(raw.knows)) {
+    return { type: 'hello', knows: raw.knows }
   }
   return null
 }

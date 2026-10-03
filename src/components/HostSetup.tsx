@@ -7,7 +7,7 @@ import { TopicChoice } from './TopicChoice'
 
 /** What the host decides before the invite link exists. */
 export interface HostSettings {
-  learning: LanguageCode
+  knows: LanguageCode
   /** A preset topic's id, or the text the host typed. */
   topic: string
   options: RoundOptions
@@ -30,10 +30,10 @@ export function HostSetup({ languages, topics, onCreate, onBack }: HostSetupProp
       <h2>Create a game</h2>
       <LanguagePicker
         languages={languages}
-        label="I am learning"
+        label="I speak"
         submitLabel="Create game"
         canSubmit={topic !== null}
-        onSubmit={(learning) => topic !== null && onCreate({ learning, topic, options })}
+        onSubmit={(knows) => topic !== null && onCreate({ knows, topic, options })}
       >
         <RoundOptionsFields options={options} onChange={setOptions} />
         <TopicChoice topics={topics} onChange={setTopic} />

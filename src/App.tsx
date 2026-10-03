@@ -35,7 +35,7 @@ function App({ network = peerNetwork, generator = configuredGenerator }: AppProp
         <h1>
           <span aria-hidden="true">💬</span> Tandem Game
         </h1>
-        <p>Learn a language together, one sentence at a time.</p>
+        <p>Learn each other's language, one sentence at a time.</p>
       </header>
       <OnlineGame
         network={network}

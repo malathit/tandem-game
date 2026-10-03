@@ -134,7 +134,7 @@ describe('invite links', () => {
 
     const view = render(<OnlineGame network={network} languages={languages} initialCode={host.code} />)
     const guest = within(view.container)
-    await user.selectOptions(await guest.findByLabelText('I am learning'), 'de')
+    await user.selectOptions(await guest.findByLabelText('I speak'), 'en')
     await user.click(guest.getByRole('button', { name: 'Continue' }))
     await reviewing(host)
   })
@@ -158,7 +158,7 @@ describe('joining announcements', () => {
     expect(host.ui.getByText(/waiting for them to choose their language/i)).toBeInTheDocument()
     expect(host.ui.queryByLabelText('Invite link')).not.toBeInTheDocument()
 
-    await user.selectOptions(await guest.ui.findByLabelText('I am learning'), 'de')
+    await user.selectOptions(await guest.ui.findByLabelText('I speak'), 'en')
     await user.click(guest.ui.getByRole('button', { name: 'Continue' }))
     await reviewing(host)
     expect(host.ui.queryByRole('heading', { name: /has joined/i })).not.toBeInTheDocument()
@@ -182,7 +182,7 @@ describe('joining announcements', () => {
     const host = await createGame(network, user)
     const guest = await startJoining(network, user, host.code)
 
-    expect(await guest.ui.findByLabelText('I am learning')).toBeInTheDocument()
+    expect(await guest.ui.findByLabelText('I speak')).toBeInTheDocument()
     expect(guest.ui.getByRole('status')).toHaveTextContent(/you've joined the room/i)
   })
 })
@@ -195,10 +195,10 @@ describe('progress steps', () => {
     expect(currentStep(host)).toBe('Connect')
 
     const guest = await startJoining(network, user, host.code)
-    await guest.ui.findByLabelText('I am learning')
+    await guest.ui.findByLabelText('I speak')
     expect(currentStep(guest)).toBe('Connect')
 
-    await user.selectOptions(guest.ui.getByLabelText('I am learning'), 'de')
+    await user.selectOptions(guest.ui.getByLabelText('I speak'), 'en')
     await user.click(guest.ui.getByRole('button', { name: 'Continue' }))
     await reviewing(host)
     await guest.ui.findByRole('heading', { name: 'Review your sentences' })
@@ -213,16 +213,16 @@ describe('progress steps', () => {
 })
 
 describe('joining', () => {
-  it("does not offer the guest the language the host is already learning", async () => {
+  it("does not offer the guest the language the host already speaks", async () => {
     const user = userEvent.setup()
     const network = createMemoryNetwork()
     const host = await createGame(network, user)
     const guest = await startJoining(network, user, host.code)
 
-    const select = await guest.ui.findByLabelText('I am learning')
-    expect(guest.ui.getByText(/your partner is learning English/i)).toBeInTheDocument()
-    expect(within(select).queryByRole('option', { name: 'English' })).not.toBeInTheDocument()
-    expect(within(select).getByRole('option', { name: 'German' })).toBeInTheDocument()
+    const select = await guest.ui.findByLabelText('I speak')
+    expect(guest.ui.getByText(/your partner speaks German/i)).toBeInTheDocument()
+    expect(within(select).queryByRole('option', { name: 'German' })).not.toBeInTheDocument()
+    expect(within(select).getByRole('option', { name: 'English' })).toBeInTheDocument()
   })
 
   it('says so when there is no game with that code', async () => {
@@ -254,7 +254,7 @@ describe('connection problems', () => {
     network.unavailable = true
     const device = open(network)
     await user.click(device.ui.getByRole('button', { name: 'Create a game' }))
-    await user.selectOptions(device.ui.getByLabelText('I am learning'), 'en')
+    await user.selectOptions(device.ui.getByLabelText('I speak'), 'de')
     await chooseRound(device, user)
     await user.click(device.ui.getByRole('button', { name: 'Create game' }))
 

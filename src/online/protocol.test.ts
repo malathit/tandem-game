@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { parseGuestMessage, parseHostMessage, type RoomState } from './protocol'
 
 const roomState: RoomState = {
-  hostLearning: 'en',
-  guestLearning: 'de',
+  hostKnows: 'en',
+  guestKnows: 'de',
   review: null,
   round: {
     topic: 'modal-verbs',
@@ -26,9 +26,9 @@ const withRound = (change: Record<string, unknown>) => ({
 
 describe('parseGuestMessage', () => {
   it('accepts a hello with a known language', () => {
-    expect(parseGuestMessage({ type: 'hello', learning: 'de' })).toEqual({
+    expect(parseGuestMessage({ type: 'hello', knows: 'de' })).toEqual({
       type: 'hello',
-      learning: 'de',
+      knows: 'de',
     })
   })
 
@@ -46,7 +46,7 @@ describe('parseGuestMessage', () => {
   })
 
   it.each([
-    [{ type: 'hello', learning: 'xx' }],
+    [{ type: 'hello', knows: 'xx' }],
     [{ type: 'hello' }],
     [{ type: 'explode' }],
     [{}],
@@ -84,12 +84,12 @@ describe('parseHostMessage', () => {
   })
 
   it('accepts a lobby state with no guest and no round', () => {
-    const lobby = { hostLearning: 'en', guestLearning: null, round: null, review: null }
+    const lobby = { hostKnows: 'en', guestKnows: null, round: null, review: null }
     expect(parseHostMessage({ type: 'state', state: lobby })).toEqual({ type: 'state', state: lobby })
   })
 
   it('accepts a state from a host that does not know about reviews yet, as having none', () => {
-    const old = { hostLearning: 'en', guestLearning: 'de', round: null }
+    const old = { hostKnows: 'en', guestKnows: 'de', round: null }
     expect(parseHostMessage({ type: 'state', state: old })?.state.review).toBeNull()
   })
 
@@ -128,9 +128,9 @@ describe('parseHostMessage', () => {
   })
 
   it.each([
-    ['unknown host language', { ...roomState, hostLearning: 'xx' }],
-    ['unknown guest language', { ...roomState, guestLearning: 'xx' }],
-    ['missing guest language', { hostLearning: 'en', round: null }],
+    ['unknown host language', { ...roomState, hostKnows: 'xx' }],
+    ['unknown guest language', { ...roomState, guestKnows: 'xx' }],
+    ['missing guest language', { hostKnows: 'en', round: null }],
     ['a game status that does not exist', withRound({ status: 'paused' })],
     ['a turn index past the end', withRound({ index: 2 })],
     ['a negative turn index', withRound({ index: -1 })],

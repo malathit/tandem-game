@@ -64,7 +64,7 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
         <HostRoom
           network={network}
           languages={languages}
-          hostLearning={stage.settings.learning}
+          hostKnows={stage.settings.knows}
           firstRound={stage.settings}
           generator={generator}
           onLeave={toMenu}
