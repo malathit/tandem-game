@@ -6,16 +6,25 @@ import { createGame, gameReducer } from '../game/gameReducer'
 interface GameProps {
   turns: Turn[]
   languages: Language[]
+  onPlayAgain: () => void
 }
 
-export function Game({ turns, languages }: GameProps) {
+export function Game({ turns, languages, onPlayAgain }: GameProps) {
   // The third argument runs once, on the first render, to create the initial
   // state. `turns` was already shuffled by the parent, so re-renders here
   // (every click) never reshuffle the sentences.
   const [state, dispatch] = useReducer(gameReducer, turns, createGame)
 
   if (state.status === 'finished') {
-    return <p>Round complete.</p>
+    return (
+      <section>
+        <h2>Round complete</h2>
+        <p>{state.turns.length} sentences translated.</p>
+        <button type="button" onClick={onPlayAgain}>
+          Play again
+        </button>
+      </section>
+    )
   }
 
   const turn = state.turns[state.index]

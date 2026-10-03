@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { staticSource } from './content/staticSource'
 
@@ -59,7 +59,42 @@ describe('App', () => {
       expect(screen.getByText(hasText(allowed))).toBeInTheDocument()
       await user.click(screen.getByRole('button', { name: turn === 3 ? 'Finish round' : 'Next turn' }))
     }
-    expect(screen.getByText('Round complete.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Round complete' })).toBeInTheDocument()
+  })
+
+  it('starts a fresh round on the same topic when Play again is clicked', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await chooseLanguages(user)
+    await user.click(screen.getByRole('button', { name: 'Modal verbs' }))
+    for (const label of ['Next turn', 'Next turn', 'Next turn', 'Finish round']) {
+      await user.click(screen.getByRole('button', { name: label }))
+    }
+
+    const random = vi.spyOn(Math, 'random')
+    await user.click(screen.getByRole('button', { name: 'Play again' }))
+
+    expect(random).toHaveBeenCalled() // the sentences were shuffled again
+    random.mockRestore()
+    expect(screen.queryByRole('heading', { name: 'Round complete' })).not.toBeInTheDocument()
+    expect(screen.getByText('Turn 1 of 4')).toBeInTheDocument()
+    expect(screen.getByText(/Topic: Modal verbs/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Player 1, translate into English:' }),
+    ).toBeInTheDocument()
+  })
+
+  it('lets the players pick a new topic after a round', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await chooseLanguages(user)
+    await user.click(screen.getByRole('button', { name: 'Modal verbs' }))
+    for (const label of ['Next turn', 'Next turn', 'Next turn', 'Finish round']) {
+      await user.click(screen.getByRole('button', { name: label }))
+    }
+    await user.click(screen.getByRole('button', { name: 'Change topic' }))
+
+    expect(screen.getByRole('button', { name: 'Conjunctions' })).toBeInTheDocument()
   })
 
   it('says there are no sentences yet for a custom topic', async () => {

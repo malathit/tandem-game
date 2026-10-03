@@ -13,6 +13,8 @@ const nameOf = (code: string) => languages.find((l) => l.code === code)?.name ??
 interface Round {
   topic: string
   turns: Turn[]
+  /** Changes with every new round so React gives <Game> a fresh state. */
+  number: number
 }
 
 function App() {
@@ -24,6 +26,12 @@ function App() {
   function changeLanguages() {
     setPair(null)
     setRound(null)
+  }
+
+  // The shuffle happens here, in an event handler, so it runs once per round
+  // rather than on every render.
+  function startRound(pair: LanguagePair, topic: string, number: number) {
+    setRound({ topic, turns: buildTurns(pair, topic, staticSource), number })
   }
 
   return (
@@ -38,9 +46,7 @@ function App() {
           {round === null ? (
             <TopicPicker
               topics={staticSource.getTopics(pair)}
-              // The shuffle happens here, in an event handler, so it runs once
-              // per round rather than on every render.
-              onSelect={(topic) => setRound({ topic, turns: buildTurns(pair, topic, staticSource) })}
+              onSelect={(topic) => startRound(pair, topic, 1)}
             />
           ) : (
             <>
@@ -49,7 +55,13 @@ function App() {
               {round.turns.length === 0 ? (
                 <p role="status">No sentences yet for this topic.</p>
               ) : (
-                <Game turns={round.turns} languages={languages} />
+                // A new `key` makes React throw away the old <Game> and start a fresh one.
+                <Game
+                  key={round.number}
+                  turns={round.turns}
+                  languages={languages}
+                  onPlayAgain={() => startRound(pair, round.topic, round.number + 1)}
+                />
               )}
               <button type="button" onClick={() => setRound(null)}>
                 Change topic
