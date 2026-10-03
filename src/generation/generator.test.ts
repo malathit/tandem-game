@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
 import { createHttpGenerator, generateForPair, GenerationError, type SentenceGenerator } from './generator'
-import type { GenerateRequest, GenerationErrorKind } from './types'
+import type { GeneratedSentences, GenerateRequest, GenerationErrorKind } from './types'
 
 const URL = 'https://worker.example/'
-const request: GenerateRequest = { language: 'de', topic: { kind: 'preset', id: 'weather' }, fresh: false }
+const request: GenerateRequest = { language: 'de', topic: { kind: 'preset', id: 'weather' }, fresh: false, count: 2, translate: false }
 const sentences = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.']
 
 type FetchFn = typeof fetch
@@ -25,7 +25,7 @@ describe('createHttpGenerator', () => {
   it('posts the request as JSON, without cookies, and returns the sentences', async () => {
     const fetchFn = vi.fn<FetchFn>(() => answer({ sentences }))
     const result = await createHttpGenerator(URL, { fetch: fetchFn }).generate(request)
-    expect(result).toEqual(sentences)
+    expect(result).toEqual({ sentences })
 
     const [url, init] = fetchFn.mock.calls[0]
     expect(url).toBe(URL)
@@ -79,7 +79,7 @@ describe('createHttpGenerator', () => {
 
     it('does not return extra fields from the answer', async () => {
       const result = await createHttpGenerator(URL, { fetch: () => answer({ sentences, extra: 'x' }) }).generate(request)
-      expect(result).toEqual(sentences)
+      expect(result).toEqual({ sentences })
     })
   })
 
@@ -129,7 +129,7 @@ describe('createHttpGenerator', () => {
     it('ignores a cancel that comes after the answer', async () => {
       const controller = new AbortController()
       const generator = createHttpGenerator(URL, { fetch: () => answer({ sentences }) })
-      expect(await generator.generate(request, controller.signal)).toEqual(sentences)
+      expect(await generator.generate(request, controller.signal)).toEqual({ sentences })
       expect(() => controller.abort()).not.toThrow()
     })
 
@@ -145,13 +145,45 @@ describe('createHttpGenerator', () => {
   })
 })
 
+describe('translated answers from the Worker', () => {
+  const translated = { ...request, translate: true }
+  const translations = ['I can swim very well.', 'He has to do his homework.']
+  const generate = (body: unknown, asked: GenerateRequest = translated) =>
+    createHttpGenerator(URL, { fetch: (() => answer(body)) as FetchFn }).generate(asked)
+
+  it('returns the sentences with their translations', async () => {
+    expect(await generate({ sentences, translations })).toEqual({ sentences, translations })
+  })
+
+  it('does not look for translations when none were asked for', async () => {
+    expect(await generate({ sentences }, request)).toEqual({ sentences })
+  })
+
+  it('rejects an answer without translations, with a wrong number or in the wrong language', async () => {
+    expect(await kindOf(generate({ sentences }))).toBe('invalid')
+    expect(await kindOf(generate({ sentences, translations: [translations[0]] }))).toBe('invalid')
+    expect(await kindOf(generate({ sentences, translations: sentences }))).toBe('invalid')
+  })
+
+  it('rejects a different number of sentences than the host chose', async () => {
+    expect(await kindOf(generate({ sentences }, { ...request, count: 3 }))).toBe('invalid')
+  })
+
+  it('sends the options to the Worker', async () => {
+    const fetchFn = vi.fn((() => answer({ sentences, translations })) as FetchFn)
+    await createHttpGenerator(URL, { fetch: fetchFn }).generate({ ...translated, count: 2 })
+    expect(JSON.parse(String(fetchFn.mock.calls[0][1]?.body))).toMatchObject({ count: 2, translate: true })
+  })
+})
+
 describe('generateForPair', () => {
   const pair = ['en', 'de'] as const
   const german = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.']
   const english = ['She can swim very well.', 'They should try harder today.']
   const topic = { kind: 'custom', text: 'my pet dragon' } as const
+  const options = { count: 2, translate: false }
 
-  const generatorOf = (handler: (request: GenerateRequest, signal?: AbortSignal) => Promise<string[]>): SentenceGenerator => ({
+  const generatorOf = (handler: (request: GenerateRequest, signal?: AbortSignal) => Promise<GeneratedSentences>): SentenceGenerator => ({
     generate: handler,
   })
 
@@ -159,9 +191,9 @@ describe('generateForPair', () => {
     const asked: GenerateRequest[] = []
     const generator = generatorOf(async (req) => {
       asked.push(req)
-      return req.language === 'de' ? german : english
+      return { sentences: req.language === 'de' ? german : english }
     })
-    const result = await generateForPair(generator, pair, topic, true)
+    const result = await generateForPair(generator, pair, topic, true, options)
 
     expect(asked.map((req) => req.language).sort()).toEqual(['de', 'en'])
     expect(asked.every((req) => req.fresh && req.topic === topic)).toBe(true)
@@ -169,9 +201,27 @@ describe('generateForPair', () => {
     expect(result.en?.map((s) => s.text)).toEqual(english)
   })
 
+  it('passes the options on and keeps each translation with its sentence', async () => {
+    const asked: GenerateRequest[] = []
+    const generator = generatorOf(async (req) => {
+      asked.push(req)
+      const sentences = req.language === 'de' ? german : english
+      return { sentences, translations: sentences.map((text) => `${text} (translated)`) }
+    })
+    const result = await generateForPair(generator, pair, topic, false, { count: 2, translate: true })
+    expect(asked.every((req) => req.count === 2 && req.translate)).toBe(true)
+    expect(result.de?.[0]).toEqual({ id: 'ai-de-1', text: german[0], translation: `${german[0]} (translated)` })
+  })
+
+  it('leaves out the translation when there is none', async () => {
+    const generator = generatorOf(async () => ({ sentences: german }))
+    const result = await generateForPair(generator, pair, topic, false, options)
+    expect(result.de?.[0]).toEqual({ id: 'ai-de-1', text: german[0] })
+  })
+
   it('gives every sentence its own id', async () => {
-    const generator = generatorOf(async (req) => (req.language === 'de' ? german : english))
-    const result = await generateForPair(generator, pair, topic, false)
+    const generator = generatorOf(async (req) => ({ sentences: req.language === 'de' ? german : english }))
+    const result = await generateForPair(generator, pair, topic, false, options)
     const ids = [...(result.de ?? []), ...(result.en ?? [])].map((s) => s.id)
     expect(new Set(ids).size).toBe(4)
   })
@@ -181,9 +231,9 @@ describe('generateForPair', () => {
     const generator = generatorOf((req, signal) => {
       if (req.language === 'de') return Promise.reject(new GenerationError('limit-reached'))
       otherSignal = signal
-      return new Promise<string[]>(() => {})
+      return new Promise<GeneratedSentences>(() => {})
     })
-    expect(await kindOf(generateForPair(generator, pair, topic, false))).toBe('limit-reached')
+    expect(await kindOf(generateForPair(generator, pair, topic, false, options))).toBe('limit-reached')
     expect(otherSignal?.aborted).toBe(true)
   })
 
@@ -191,13 +241,13 @@ describe('generateForPair', () => {
     const signals: AbortSignal[] = []
     const generator = generatorOf(
       (_req, signal) =>
-        new Promise<string[]>((_resolve, reject) => {
+        new Promise<GeneratedSentences>((_resolve, reject) => {
           if (signal) signals.push(signal)
           signal?.addEventListener('abort', () => reject(new GenerationError('cancelled')))
         }),
     )
     const controller = new AbortController()
-    const pending = generateForPair(generator, pair, topic, false, controller.signal)
+    const pending = generateForPair(generator, pair, topic, false, options, controller.signal)
     controller.abort()
     expect(await kindOf(pending)).toBe('cancelled')
     expect(signals).toHaveLength(2)
@@ -205,10 +255,10 @@ describe('generateForPair', () => {
   })
 
   it('does not ask at all when already cancelled', async () => {
-    const generate = vi.fn(async () => german)
+    const generate = vi.fn(async () => ({ sentences: german }))
     const controller = new AbortController()
     controller.abort()
-    expect(await kindOf(generateForPair({ generate }, pair, topic, false, controller.signal))).toBe('cancelled')
+    expect(await kindOf(generateForPair({ generate }, pair, topic, false, options, controller.signal))).toBe('cancelled')
     expect(generate).not.toHaveBeenCalled()
   })
 })

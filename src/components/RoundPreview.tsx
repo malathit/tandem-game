@@ -48,6 +48,7 @@ export function RoundPreview({ setup, topicLabel, languages, onStart, onRegenera
                   Player {turn.player} translates into {nameOf(turn.learning)}
                 </span>
                 {turn.sentence.text}
+                {turn.sentence.translation && <span className="preview-translation">{turn.sentence.translation}</span>}
               </li>
             ))}
           </ol>

@@ -4,12 +4,14 @@ export interface GameState {
   turns: Turn[]
   index: number
   status: 'playing' | 'finished'
+  /** The current turn's translation is shown to both players; it starts hidden on every turn. */
+  revealed: boolean
 }
 
-export type GameAction = { type: 'NEXT_TURN' }
+export type GameAction = { type: 'NEXT_TURN' } | { type: 'REVEAL' }
 
 export function createGame(turns: Turn[]): GameState {
-  return { turns, index: 0, status: turns.length > 0 ? 'playing' : 'finished' }
+  return { turns, index: 0, status: turns.length > 0 ? 'playing' : 'finished', revealed: false }
 }
 
 // A reducer is a pure function: (current state, action) -> next state.
@@ -21,7 +23,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         return state
       }
       const isLastTurn = state.index === state.turns.length - 1
-      return isLastTurn ? { ...state, status: 'finished' } : { ...state, index: state.index + 1 }
+      return isLastTurn
+        ? { ...state, status: 'finished', revealed: false }
+        : { ...state, index: state.index + 1, revealed: false }
     }
+    case 'REVEAL':
+      // Nothing to show when the host asked for no translations.
+      if (state.status === 'finished' || !state.turns[state.index].sentence.translation) return state
+      return { ...state, revealed: true }
   }
 }

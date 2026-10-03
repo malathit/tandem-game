@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { GenerationError, type SentenceGenerator } from '../generation/generator'
-import type { GenerateRequest, GenerationErrorKind } from '../generation/types'
+import type { GeneratedSentences, GenerateRequest, GenerationErrorKind } from '../generation/types'
 import { useRoundSetup } from './useRoundSetup'
 
 // The host learns English, the guest German.
@@ -12,7 +12,7 @@ const english = ['She can swim very well.', 'They should try harder today.']
 interface Pending {
   request: GenerateRequest
   signal?: AbortSignal
-  resolve: (sentences: string[]) => void
+  resolve: (answer: GeneratedSentences) => void
   reject: (error: unknown) => void
 }
 
@@ -21,12 +21,12 @@ function manualGenerator() {
   const pending: Pending[] = []
   const generator: SentenceGenerator = {
     generate: (request, signal) =>
-      new Promise<string[]>((resolve, reject) => {
+      new Promise<GeneratedSentences>((resolve, reject) => {
         pending.push({ request, signal, resolve, reject })
       }),
   }
   const answerAll = (lang: Record<string, string[]> = { de: german, en: english }) => {
-    for (const p of pending.splice(0)) p.resolve(lang[p.request.language])
+    for (const p of pending.splice(0)) p.resolve({ sentences: lang[p.request.language] })
   }
   const failAll = (kind: GenerationErrorKind) => {
     for (const p of pending.splice(0)) p.reject(new GenerationError(kind))
@@ -43,6 +43,13 @@ async function previewing() {
   act(() => result.current.choose(preset))
   act(() => manual.answerAll())
   await waitFor(() => expect(result.current.state).toMatchObject({ phase: 'preview', busy: false }))
+  return { ...manual, result }
+}
+
+/** A hook with nothing chosen yet. */
+function start() {
+  const manual = manualGenerator()
+  const { result } = renderHook(() => useRoundSetup(pair, manual.generator))
   return { ...manual, result }
 }
 
@@ -96,6 +103,33 @@ describe('useRoundSetup', () => {
     })
   })
 
+  describe('round options', () => {
+    it('asks for the chosen number of sentences and translations, and builds that many turns', async () => {
+      const { result, pending } = start()
+      act(() => result.current.choose(preset, { count: 1, translate: true }))
+      expect(pending.map((p) => p.request)).toEqual(
+        expect.arrayContaining([expect.objectContaining({ count: 1, translate: true })]),
+      )
+      act(() => {
+        for (const p of pending.splice(0)) p.resolve({ sentences: [(p.request.language === 'de' ? german : english)[0]] })
+      })
+      await waitFor(() => expect(result.current.state).toMatchObject({ busy: false }))
+      expect(result.current.state).toMatchObject({ options: { count: 1, translate: true } })
+      expect(result.current.state.phase === 'preview' && result.current.state.turns).toHaveLength(2)
+    })
+
+    it('keeps the options when it asks for new sentences', async () => {
+      const { result, pending } = start()
+      act(() => result.current.choose(preset, { count: 3, translate: false }))
+      act(() => pending.splice(0).forEach((p) => p.reject(new GenerationError('unavailable'))))
+      await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, error: 'unavailable' }))
+      act(() => result.current.regenerate())
+      expect(pending.map((p) => p.request)).toEqual(
+        expect.arrayContaining([expect.objectContaining({ count: 3, fresh: true })]),
+      )
+    })
+  })
+
   describe('regenerating with the AI', () => {
     it('keeps showing the current sentences while it works, then swaps in the new ones', async () => {
       const { pending, answerAll, result } = await previewing()
@@ -105,8 +139,8 @@ describe('useRoundSetup', () => {
       expect(result.current.state).toMatchObject({ phase: 'preview', busy: true, turns: before })
       expect(pending.map((p) => p.request)).toEqual(
         expect.arrayContaining([
-          { language: 'de', topic: { kind: 'preset', id: preset }, fresh: true },
-          { language: 'en', topic: { kind: 'preset', id: preset }, fresh: true },
+          { language: 'de', topic: { kind: 'preset', id: preset }, fresh: true, count: 2, translate: false },
+          { language: 'en', topic: { kind: 'preset', id: preset }, fresh: true, count: 2, translate: false },
         ]),
       )
 

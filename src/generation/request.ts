@@ -1,6 +1,6 @@
 import { PRESET_TOPICS } from '../content/topics'
 import { isLanguageCode } from '../content/types'
-import type { GenerateRequest, GenerateTopic } from './types'
+import { DEFAULT_COUNT, MAX_COUNT, MIN_COUNT, type GenerateRequest, type GenerateTopic } from './types'
 
 export const MAX_TOPIC_LENGTH = 60
 
@@ -36,6 +36,11 @@ function parseTopic(value: unknown): GenerateTopic | null {
 export function parseGenerateRequest(value: unknown): GenerateRequest | null {
   if (!isRecord(value) || !isLanguageCode(value.language)) return null
   if (value.fresh !== undefined && typeof value.fresh !== 'boolean') return null
+  if (value.translate !== undefined && typeof value.translate !== 'boolean') return null
+  const count = value.count === undefined ? DEFAULT_COUNT : value.count
+  if (typeof count !== 'number' || !Number.isInteger(count) || count < MIN_COUNT || count > MAX_COUNT) return null
   const topic = parseTopic(value.topic)
-  return topic === null ? null : { language: value.language, topic, fresh: value.fresh ?? false }
+  return topic === null
+    ? null
+    : { language: value.language, topic, fresh: value.fresh ?? false, count, translate: value.translate ?? false }
 }

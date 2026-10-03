@@ -280,6 +280,54 @@ progress {
   font-size: 0.875rem;
 }
 
+/* The translation under a sentence, in the review and during the round */
+
+.preview-translation {
+  display: block;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
+.translation {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 6px solid var(--player, var(--accent));
+  border-radius: 0.75rem;
+  background: var(--surface);
+  font-size: 1.25rem;
+}
+
+/* The host's round settings */
+
+.round-options {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+}
+
+.round-options legend {
+  padding: 0 var(--space-1);
+  font-weight: 700;
+}
+
+label.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+label.check input {
+  width: 1.25rem;
+  min-height: 0;
+  height: 1.25rem;
+}
+
 /* Status messages */
 
 .waiting {

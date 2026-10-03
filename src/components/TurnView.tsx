@@ -7,12 +7,14 @@ interface TurnViewProps {
   /** Whether this device's player may move the game on. */
   canAct: boolean
   onNext: () => void
+  /** Shows the translation to both players. */
+  onReveal: () => void
   /** Only given on a device that may start another round. */
   onPlayAgain?: () => void
 }
 
 /** Shows a round from the host's copy of the game; it owns no state itself. */
-export function TurnView({ game, languages, canAct, onNext, onPlayAgain }: TurnViewProps) {
+export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgain }: TurnViewProps) {
   if (game.status === 'finished') {
     return (
       <section className="card finished">
@@ -31,6 +33,7 @@ export function TurnView({ game, languages, canAct, onNext, onPlayAgain }: TurnV
 
   const turn = game.turns[game.index]
   const isLastTurn = game.index === game.turns.length - 1
+  const needsReveal = turn.sentence.translation !== undefined && !game.revealed
   const learning = languages.find((l) => l.code === turn.learning)?.name ?? turn.learning
 
   return (
@@ -44,10 +47,23 @@ export function TurnView({ game, languages, canAct, onNext, onPlayAgain }: TurnV
         Player {turn.player}, translate into {learning}:
       </h2>
       <p className="sentence">{turn.sentence.text}</p>
+      {game.revealed && (
+        <p className="translation">
+          <span className="preview-who">Translation</span>
+          {turn.sentence.translation}
+        </p>
+      )}
       {canAct ? (
-        <button type="button" className="primary" onClick={onNext}>
-          {isLastTurn ? 'Finish round' : 'Next turn'}
-        </button>
+        // With translations on, the speaker shows it first; then both have seen it and can move on.
+        needsReveal ? (
+          <button type="button" className="primary" onClick={onReveal}>
+            Show translation
+          </button>
+        ) : (
+          <button type="button" className="primary" onClick={onNext}>
+            {isLastTurn ? 'Finish round' : 'Next turn'}
+          </button>
+        )
       ) : (
         <p role="status">Waiting for Player {turn.player} to finish their turn…</p>
       )}

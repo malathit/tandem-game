@@ -1,4 +1,5 @@
 import type { LanguageCode, LanguagePair, Sentence } from '../content/types'
+import { DEFAULT_COUNT } from '../generation/types'
 
 export interface Turn {
   player: 1 | 2
@@ -7,8 +8,6 @@ export interface Turn {
   /** The language the player translates into, i.e. the one they are learning. */
   learning: LanguageCode
 }
-
-export const SENTENCES_PER_PLAYER = 2
 
 /** Sentences available for a round, by the language they are written in. */
 export type SentencesByLanguage = Partial<Record<LanguageCode, readonly Sentence[]>>
@@ -29,19 +28,20 @@ export const shuffled: Shuffle = (items) => {
  * Builds the turns of one round, alternating Player 1 and Player 2.
  * `pair` is [language Player 1 is learning, language Player 2 is learning], so
  * Player 1 reads sentences in `pair[1]` (their native language) and vice versa.
- * The round is as long as the shorter of the two sentence lists allows.
+ * Each player gets `perPlayer` turns, fewer if a sentence list is shorter.
  */
 export function buildTurns(
   pair: LanguagePair,
   sentences: SentencesByLanguage,
+  perPlayer: number = DEFAULT_COUNT,
   shuffle: Shuffle = shuffled,
 ): Turn[] {
   const [learnedByPlayer1, learnedByPlayer2] = pair
   const forPlayer1 = shuffle(sentences[learnedByPlayer2] ?? [])
   const forPlayer2 = shuffle(sentences[learnedByPlayer1] ?? [])
-  const perPlayer = Math.min(SENTENCES_PER_PLAYER, forPlayer1.length, forPlayer2.length)
+  const turnsEach = Math.min(perPlayer, forPlayer1.length, forPlayer2.length)
 
-  return Array.from({ length: perPlayer }).flatMap((_, i): Turn[] => [
+  return Array.from({ length: turnsEach }).flatMap((_, i): Turn[] => [
     { player: 1, sentence: forPlayer1[i], learning: learnedByPlayer1 },
     { player: 2, sentence: forPlayer2[i], learning: learnedByPlayer2 },
   ])

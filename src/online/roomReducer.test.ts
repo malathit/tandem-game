@@ -35,7 +35,7 @@ describe('START_ROUND', () => {
   it('starts a round on the first turn', () => {
     expect(playing.round).toEqual({
       topic: 'modal-verbs',
-      game: { turns, index: 0, status: 'playing' },
+      game: { turns, index: 0, status: 'playing', revealed: false },
     })
   })
 
@@ -80,5 +80,29 @@ describe('CHANGE_TOPIC', () => {
   it('goes back to topic choice and keeps both languages', () => {
     const room = roomReducer(playing, { type: 'CHANGE_TOPIC' })
     expect(room).toEqual({ hostLearning: 'en', guestLearning: 'de', round: null })
+  })
+})
+
+describe('REVEAL', () => {
+  const translated = turns.map((turn) => ({ ...turn, sentence: { ...turn.sentence, translation: `${turn.sentence.text}!` } }))
+  const withTranslations = roomReducer(joined, { type: 'START_ROUND', topic: 'weather', turns: translated })
+  const revealed = (room: typeof joined) => room.round?.game.revealed
+
+  it('shows the translation when the player whose turn it is asks', () => {
+    expect(revealed(roomReducer(withTranslations, { type: 'REVEAL', from: 1 }))).toBe(true)
+  })
+
+  it("ignores the other player's request", () => {
+    expect(roomReducer(withTranslations, { type: 'REVEAL', from: 2 })).toBe(withTranslations)
+  })
+
+  it('ignores a request when there is no round or no translation', () => {
+    expect(roomReducer(joined, { type: 'REVEAL', from: 1 })).toBe(joined)
+    expect(revealed(roomReducer(playing, { type: 'REVEAL', from: 1 }))).toBe(false)
+  })
+
+  it('hides it again when the game moves on', () => {
+    const shown = roomReducer(withTranslations, { type: 'REVEAL', from: 1 })
+    expect(revealed(roomReducer(shown, { type: 'NEXT_TURN', from: 1 }))).toBe(false)
   })
 })

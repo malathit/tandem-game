@@ -9,7 +9,7 @@ const WORKER = new RegExp(process.env.E2E_WORKER_PATTERN ?? 'workers\\.dev')
 function expectUsableSentences(turns: Turn[]) {
   for (const [player, language] of [[1, 'de'], [2, 'en']] as const) {
     const sentences = turns.filter((turn) => turn.player === player).map((turn) => turn.text)
-    expect(parseModelOutput({ sentences }, language), `Player ${player} sentences: ${sentences.join(' | ')}`).toMatchObject({ ok: true })
+    expect(parseModelOutput({ sentences }, language, sentences.length), `Player ${player} sentences: ${sentences.join(' | ')}`).toMatchObject({ ok: true })
   }
 }
 
@@ -37,6 +37,29 @@ test('a preset topic is written by the AI, can be regenerated, and is played on 
 
   await host.getByRole('button', { name: 'Start round' }).click()
   await playRound(game, second)
+})
+
+test('the host can choose fewer sentences with translations, shown to both after each turn', async ({ browser }) => {
+  const game = await startGame(browser)
+  const { host } = game
+
+  await host.getByLabel('Sentences per player').selectOption('1')
+  await host.getByLabel('Show the translation after each turn').check()
+  const answered = workerAnswered(host)
+  await host.getByRole('button', { name: TOPIC }).click()
+  await answered
+  await expect(host.getByText(/Written by AI/)).toBeVisible({ timeout: 30_000 })
+
+  const turns = await reviewedTurns(host, 2)
+  expectUsableSentences(turns)
+  // Player 1 reads German and translates into English; Player 2 the other way round.
+  for (const [player, language] of [[1, 'en'], [2, 'de']] as const) {
+    const translation = turns.find((turn) => turn.player === player)?.translation ?? ''
+    expect(parseModelOutput({ sentences: [translation] }, language, 1), `Player ${player} translation: ${translation}`).toMatchObject({ ok: true })
+  }
+
+  await host.getByRole('button', { name: 'Start round' }).click()
+  await playRound(game, turns)
 })
 
 test('a custom topic is written by the AI and played on both devices', async ({ browser }) => {

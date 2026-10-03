@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { staticSource } from '../content/staticSource'
 import type { ContentSource, LanguagePair } from '../content/types'
 import { GenerationError, generateForPair, type SentenceGenerator } from '../generation/generator'
-import type { GenerateTopic, GenerationErrorKind } from '../generation/types'
+import { DEFAULT_ROUND_OPTIONS, type GenerateTopic, type GenerationErrorKind, type RoundOptions } from '../generation/types'
 import { buildTurns, type Turn } from './buildTurns'
 
 export type RoundSetup =
@@ -12,6 +12,7 @@ export type RoundSetup =
   | {
       phase: 'preview'
       topic: GenerateTopic
+      options: RoundOptions
       turns: Turn[]
       /** An AI request is running. */
       busy: boolean
@@ -40,15 +41,22 @@ export function useRoundSetup(
   useEffect(() => stop, [stop])
 
   const run = useCallback(
-    async (topic: GenerateTopic, fresh: boolean) => {
+    async (topic: GenerateTopic, options: RoundOptions, fresh: boolean) => {
       if (!generator || pair === null) return
       stop()
       const mine = new AbortController()
       current.current = mine
       try {
-        const sentences = await generateForPair(generator, pair, topic, fresh, mine.signal)
+        const sentences = await generateForPair(generator, pair, topic, fresh, options, mine.signal)
         if (mine.signal.aborted) return
-        setState({ phase: 'preview', topic, turns: buildTurns(pair, sentences), busy: false, error: null })
+        setState({
+          phase: 'preview',
+          topic,
+          options,
+          turns: buildTurns(pair, sentences, options.count),
+          busy: false,
+          error: null,
+        })
       } catch (error) {
         if (mine.signal.aborted) return
         const kind = error instanceof GenerationError ? error.kind : 'unavailable'
@@ -62,12 +70,12 @@ export function useRoundSetup(
 
   /** `topic` is a preset's id or the text the host typed. */
   const choose = useCallback(
-    (topic: string) => {
+    (topic: string, options: RoundOptions = DEFAULT_ROUND_OPTIONS) => {
       if (!generator || pair === null) return
       const isPreset = source.getTopics().some((preset) => preset.id === topic)
       const chosen: GenerateTopic = isPreset ? { kind: 'preset', id: topic } : { kind: 'custom', text: topic }
-      setState({ phase: 'preview', topic: chosen, turns: [], busy: true, error: null })
-      void run(chosen, false)
+      setState({ phase: 'preview', topic: chosen, options, turns: [], busy: true, error: null })
+      void run(chosen, options, false)
     },
     [generator, pair, run, source],
   )
@@ -76,7 +84,7 @@ export function useRoundSetup(
   const regenerate = useCallback(() => {
     if (!generator || state.phase !== 'preview' || state.busy) return
     setState({ ...state, busy: true, error: null })
-    void run(state.topic, true)
+    void run(state.topic, state.options, true)
   }, [generator, run, state])
 
   /** Stop a running request; the host keeps what they had, or goes back to the topics if they had nothing. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseModelOutput } from './validate'
+import { parseModelOutput, parseTranslatedOutput } from './validate'
 
 const german = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.']
 const english = ['She can speak English fluently.', 'They should try harder today.']
@@ -120,6 +120,72 @@ describe('parseModelOutput', () => {
   it('never throws, whatever it is given', () => {
     for (const raw of [{}, [], [[]], { sentences: {} }, 'null', '[', '{"sentences": [', Symbol.iterator, 7n]) {
       expect(() => parseModelOutput(raw, 'de')).not.toThrow()
+    }
+  })
+})
+
+describe('parseModelOutput with a count', () => {
+  const five = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.', 'Wir wollen heute ins Kino gehen.', 'Sie darf später schlafen.', 'Das ist mein bester Freund.']
+
+  it('wants exactly the number of sentences asked for', () => {
+    expect(parseModelOutput(json(five), 'de', 5)).toEqual({ ok: true, sentences: five })
+    expect(parseModelOutput(json(five), 'de', 4)).toEqual({ ok: false, reason: 'wrong-count' })
+    expect(parseModelOutput(json(five.slice(0, 1)), 'de', 1)).toMatchObject({ ok: true })
+    expect(parseModelOutput(json(five.slice(0, 1)), 'de')).toEqual({ ok: false, reason: 'wrong-count' })
+  })
+})
+
+describe('parseTranslatedOutput', () => {
+  const pairs = [
+    { text: 'Ich kann gut schwimmen.', translation: 'I can swim very well.' },
+    { text: 'Er muss seine Hausaufgaben machen.', translation: 'He has to do his homework.' },
+  ]
+
+  it('splits the pairs into sentences and their translations, in order', () => {
+    const expected = {
+      ok: true,
+      sentences: ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.'],
+      translations: ['I can swim very well.', 'He has to do his homework.'],
+    }
+    expect(parseTranslatedOutput(json(pairs), 'de')).toEqual(expected)
+    expect(parseTranslatedOutput({ sentences: pairs }, 'de')).toEqual(expected)
+    expect(parseTranslatedOutput(pairs, 'de')).toEqual(expected)
+    expect(parseTranslatedOutput('```json\n' + json(pairs) + '\n```', 'de')).toEqual(expected)
+  })
+
+  it('checks the count', () => {
+    expect(parseTranslatedOutput(json(pairs), 'de', 3)).toEqual({ ok: false, reason: 'wrong-count' })
+    expect(parseTranslatedOutput(json(pairs.slice(0, 1)), 'de', 1)).toMatchObject({ ok: true })
+  })
+
+  it('rejects items that are not a text with a translation', () => {
+    for (const bad of [['Ich kann gut schwimmen.', 'Er muss gehen.'], [{ text: 'Ich kann gut schwimmen.' }, pairs[1]], [{ text: 1, translation: 2 }, pairs[1]], [null, pairs[1]]]) {
+      expect(parseTranslatedOutput(json(bad), 'de'), JSON.stringify(bad)).toEqual({ ok: false, reason: 'bad-shape' })
+    }
+    expect(parseTranslatedOutput('no json here', 'de')).toEqual({ ok: false, reason: 'not-json' })
+    expect(parseTranslatedOutput(json({ no: 'list' }), 'de')).toEqual({ ok: false, reason: 'bad-shape' })
+  })
+
+  it('wants the sentences in the language asked for and the translations in the other one', () => {
+    const swapped = pairs.map(({ text, translation }) => ({ text: translation, translation: text }))
+    expect(parseTranslatedOutput(json(swapped), 'de')).toEqual({ ok: false, reason: 'wrong-language' })
+    expect(parseTranslatedOutput(json(swapped), 'en')).toMatchObject({ ok: true })
+    const sameLanguage = pairs.map(({ text }) => ({ text, translation: text.replace('.', '!') }))
+    expect(parseTranslatedOutput(json(sameLanguage), 'de')).toEqual({ ok: false, reason: 'wrong-language' })
+  })
+
+  it('applies the same checks to translations as to sentences', () => {
+    const withLink = [{ ...pairs[0], translation: 'I can swim, see http://example.com now' }, pairs[1]]
+    expect(parseTranslatedOutput(json(withLink), 'de')).toEqual({ ok: false, reason: 'markup' })
+    const tooShort = [{ ...pairs[0], translation: 'Yes.' }, pairs[1]]
+    expect(parseTranslatedOutput(json(tooShort), 'de')).toEqual({ ok: false, reason: 'bad-length' })
+    const repeated = [pairs[0], { ...pairs[1], translation: pairs[0].translation }]
+    expect(parseTranslatedOutput(json(repeated), 'de')).toEqual({ ok: false, reason: 'duplicate' })
+  })
+
+  it('never throws, whatever it is given', () => {
+    for (const raw of [undefined, null, 5, {}, [], '', '{', [[]], { sentences: [[]] }]) {
+      expect(() => parseTranslatedOutput(raw, 'de')).not.toThrow()
     }
   })
 })

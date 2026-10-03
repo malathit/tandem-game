@@ -206,17 +206,17 @@ describe('generating sentences', () => {
 })
 
 describe('stored sentences for preset topics', () => {
-  const key = 'pool:v2:de:weather'
+  const key = 'pool:v3:de:weather:2:plain'
 
   it('stores a freshly generated batch for 30 days', async () => {
     ai.replies = [good]
     await ask(preset())
-    expect(JSON.parse(kv.data.get(key) ?? 'null')).toEqual([good.sentences])
+    expect(JSON.parse(kv.data.get(key) ?? 'null')).toEqual([good])
     expect(kv.puts.find((put) => put.key === key)?.ttl).toBe(30 * 24 * 60 * 60)
   })
 
   it('serves a stored batch without calling the AI', async () => {
-    kv.data.set(key, JSON.stringify([other.sentences]))
+    kv.data.set(key, JSON.stringify([other]))
     const { body } = await ask(preset())
     expect(body).toEqual(other)
     expect(ai.calls).toHaveLength(0)
@@ -224,7 +224,7 @@ describe('stored sentences for preset topics', () => {
   })
 
   it('picks among stored batches at random', async () => {
-    kv.data.set(key, JSON.stringify([good.sentences, other.sentences]))
+    kv.data.set(key, JSON.stringify([good, other]))
     random = 0.99
     expect((await ask(preset())).body).toEqual(other)
     random = 0
@@ -232,25 +232,25 @@ describe('stored sentences for preset topics', () => {
   })
 
   it('asks the AI again when "fresh" is set, and adds the new batch in front', async () => {
-    kv.data.set(key, JSON.stringify([good.sentences]))
+    kv.data.set(key, JSON.stringify([good]))
     ai.replies = [other]
     expect((await ask(preset({ fresh: true }))).body).toEqual(other)
-    expect(JSON.parse(kv.data.get(key) ?? 'null')).toEqual([other.sentences, good.sentences])
+    expect(JSON.parse(kv.data.get(key) ?? 'null')).toEqual([other, good])
   })
 
   it('keeps only the five newest batches and no duplicates', async () => {
-    const batch = (n: number) => [`Ich kann Nummer ${n} sehen.`, `Er muss Nummer ${n} lesen.`]
+    const batch = (n: number) => ({ sentences: [`Ich kann Nummer ${n} sehen.`, `Er muss Nummer ${n} lesen.`] })
     kv.data.set(key, JSON.stringify([1, 2, 3, 4, 5].map(batch)))
-    ai.replies = [{ sentences: batch(6) }]
+    ai.replies = [batch(6)]
     await ask(preset({ fresh: true }))
     expect(JSON.parse(kv.data.get(key) ?? '[]')).toEqual([6, 1, 2, 3, 4].map(batch))
-    ai.replies = [{ sentences: batch(1) }]
+    ai.replies = [batch(1)]
     await ask(preset({ fresh: true }))
     expect(JSON.parse(kv.data.get(key) ?? '[]')).toEqual([1, 6, 2, 3, 4].map(batch))
   })
 
   it('ignores stored data that is damaged or no longer valid', async () => {
-    kv.data.set(key, JSON.stringify([['only one'], 'junk', good.sentences]))
+    kv.data.set(key, JSON.stringify([{ sentences: ['only one'] }, 'junk', ['bare list'], good]))
     expect((await ask(preset())).body).toEqual(good)
     kv.data.set(key, 'not json at all')
     ai.replies = [other]
@@ -258,11 +258,11 @@ describe('stored sentences for preset topics', () => {
   })
 
   it('keeps German and English batches apart', async () => {
-    kv.data.set(key, JSON.stringify([good.sentences]))
+    kv.data.set(key, JSON.stringify([good]))
     ai.replies = [{ sentences: ['She can swim very well.', 'They should try harder today.'] }]
     const { body } = await ask(preset({ language: 'en' }))
     expect((body.sentences as string[])[0]).toMatch(/swim/)
-    expect(kv.keys('pool:')).toEqual([key, 'pool:v2:en:weather'])
+    expect(kv.keys('pool:')).toEqual([key, 'pool:v3:en:weather:2:plain'])
   })
 
   it('still answers when storing the batch fails', async () => {
@@ -325,7 +325,7 @@ describe('the daily cap on AI calls', () => {
 
   it('falls back to a stored batch for a preset when the cap is reached', async () => {
     kv.data.set(capKey, '5')
-    kv.data.set('pool:v2:de:weather', JSON.stringify([other.sentences]))
+    kv.data.set('pool:v3:de:weather:2:plain', JSON.stringify([other]))
     expect((await ask(preset({ fresh: true }))).body).toEqual(other)
     expect((await ask(preset({ language: 'en' }))).status).toBe(429)
   })
@@ -336,5 +336,129 @@ describe('the daily cap on AI calls', () => {
     expect(status).toBe(503)
     expect(body).toEqual({ error: 'unavailable' })
     expect(ai.calls).toHaveLength(0)
+  })
+})
+
+describe('rounds of other lengths, with translations', () => {
+  const five = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.', 'Wir wollen heute ins Kino gehen.', 'Sie darf später schlafen.', 'Das ist mein bester Freund.']
+  const translated = {
+    sentences: [
+      { text: 'Ich kann gut schwimmen.', translation: 'I can swim very well.' },
+      { text: 'Er muss seine Hausaufgaben machen.', translation: 'He has to do his homework.' },
+    ],
+  }
+  const translatedAnswer = {
+    sentences: ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.'],
+    translations: ['I can swim very well.', 'He has to do his homework.'],
+  }
+
+  it('asks for the number of sentences the host chose, and says so in the prompt', async () => {
+    ai.replies = [{ sentences: five }]
+    const { status, body } = await ask({ ...custom('pets'), count: 5 })
+    expect(status).toBe(200)
+    expect(body).toEqual({ sentences: five })
+    expect(ai.calls[0].input.messages[0].content).toMatch(/exactly 5 sentences/)
+  })
+
+  it('says "sentence", not "sentences", for one', async () => {
+    ai.replies = [{ sentences: [five[0]] }]
+    await ask({ ...custom('pets'), count: 1 })
+    expect(ai.calls[0].input.messages[0].content).toMatch(/exactly 1 sentence\./)
+  })
+
+  it('retries when the model gives a different number than asked for', async () => {
+    ai.replies = [{ sentences: five.slice(0, 4) }, { sentences: five }]
+    expect((await ask({ ...custom('pets'), count: 5 })).status).toBe(200)
+    expect(ai.calls).toHaveLength(2)
+  })
+
+  it('refuses a count outside 1 to 5 before spending anything', async () => {
+    for (const count of [0, 6, 2.5, '3']) expect((await ask({ ...custom('pets'), count })).status).toBe(400)
+    expect(ai.calls).toHaveLength(0)
+  })
+
+  it('gives the model more room for longer answers with translations', async () => {
+    ai.replies = [{ sentences: [five[0]] }, { sentences: five }, translated]
+    await ask({ ...custom('pets'), count: 1 })
+    await ask({ ...custom('pets'), count: 5 })
+    await ask({ ...custom('pets'), translate: true })
+    const limits = ai.calls.map((call) => (call.input as unknown as { max_tokens: number }).max_tokens)
+    expect(limits[0]).toBeLessThan(limits[1])
+    expect(limits[2]).toBeGreaterThan(300)
+  })
+
+  describe('with translations', () => {
+    it('asks for a translation of every sentence into the other language, and returns both lists', async () => {
+      ai.replies = [translated]
+      const { status, body } = await ask({ ...custom('pets'), translate: true })
+      expect(status).toBe(200)
+      expect(body).toEqual(translatedAnswer)
+      const system = ai.calls[0].input.messages[0].content
+      expect(system).toMatch(/"translation"/)
+      expect(system).toMatch(/into English/)
+      expect(system).toMatch(/written in German/)
+    })
+
+    it('does not send translations when they were not asked for', async () => {
+      ai.replies = [good]
+      expect((await ask(custom('pets'))).body).toEqual(good)
+    })
+
+    it('retries when a translation is missing, in the wrong language, or a link', async () => {
+      const wrongLanguage = { sentences: translated.sentences.map(({ text }) => ({ text, translation: text })) }
+      const missing = { sentences: translated.sentences.map(({ text }) => ({ text })) }
+      for (const bad of [wrongLanguage, missing, good]) {
+        kv = new FakeKv()
+        ai.calls.length = 0
+        ai.replies = [bad, translated]
+        const { status, body } = await ask({ ...custom('pets'), translate: true })
+        expect(status).toBe(200)
+        expect(body).toEqual(translatedAnswer)
+        expect(ai.calls).toHaveLength(2)
+      }
+    })
+
+    it('gives up with "invalid" when no attempt has usable translations', async () => {
+      ai.replies = [good, good]
+      const { status, body } = await ask({ ...custom('pets'), translate: true })
+      expect(status).toBe(502)
+      expect(body).toEqual({ error: 'invalid' })
+    })
+  })
+
+  describe('stored sentences', () => {
+    const plainKey = 'pool:v3:de:weather:2:plain'
+    const translatedKey = 'pool:v3:de:weather:2:translated'
+
+    it('keeps a separate store for each count and for translations', async () => {
+      ai.replies = [good, { sentences: five }, translated]
+      await ask(preset())
+      await ask(preset({ count: 5 }))
+      await ask(preset({ translate: true }))
+      expect([...kv.keys('pool:')].sort()).toEqual([plainKey, 'pool:v3:de:weather:5:plain', translatedKey].sort())
+    })
+
+    it('stores translations with their sentences and serves both from the store', async () => {
+      ai.replies = [translated]
+      await ask(preset({ translate: true }))
+      expect(JSON.parse(kv.data.get(translatedKey) ?? 'null')).toEqual([translatedAnswer])
+
+      const { body } = await ask(preset({ translate: true }))
+      expect(body).toEqual(translatedAnswer)
+      expect(ai.calls).toHaveLength(1)
+    })
+
+    it('does not serve a plain batch to a request that wants translations', async () => {
+      kv.data.set(translatedKey, JSON.stringify([good]))
+      ai.replies = [translated]
+      expect((await ask(preset({ translate: true }))).body).toEqual(translatedAnswer)
+      expect(ai.calls).toHaveLength(1)
+    })
+
+    it('ignores stored translations that are in the wrong language', async () => {
+      kv.data.set(translatedKey, JSON.stringify([{ sentences: good.sentences, translations: good.sentences }]))
+      ai.replies = [translated]
+      expect((await ask(preset({ translate: true }))).body).toEqual(translatedAnswer)
+    })
   })
 })

@@ -13,6 +13,7 @@ const roomState: RoomState = {
       ],
       index: 1,
       status: 'playing',
+      revealed: false,
     },
   },
 }
@@ -28,6 +29,10 @@ describe('parseGuestMessage', () => {
       type: 'hello',
       learning: 'de',
     })
+  })
+
+  it('accepts reveal', () => {
+    expect(parseGuestMessage({ type: 'reveal', extra: 'x' })).toEqual({ type: 'reveal' })
   })
 
   it('accepts next-turn and drops unexpected fields', () => {
@@ -57,6 +62,21 @@ describe('parseHostMessage', () => {
     })
   })
 
+  it('keeps a translation and the reveal flag', () => {
+    const state = withRound({
+      turns: [{ player: 1, sentence: { id: 'a', text: 'Ich kann schwimmen.', translation: 'I can swim.' }, learning: 'en' }],
+      index: 0,
+      revealed: true,
+    })
+    expect(parseHostMessage({ type: 'state', state })).toEqual({ type: 'state', state })
+  })
+
+  it('drops unexpected fields from a sentence', () => {
+    const turn = { player: 1, sentence: { id: 'a', text: 'x', answer: 'y' }, learning: 'en' }
+    const parsed = parseHostMessage({ type: 'state', state: withRound({ turns: [turn], index: 0 }) })
+    expect(parsed?.state.round?.game.turns[0].sentence).toEqual({ id: 'a', text: 'x' })
+  })
+
   it('accepts a lobby state with no guest and no round', () => {
     const lobby = { hostLearning: 'en', guestLearning: null, round: null }
     expect(parseHostMessage({ type: 'state', state: lobby })).toEqual({ type: 'state', state: lobby })
@@ -73,6 +93,10 @@ describe('parseHostMessage', () => {
     ['a player that is not 1 or 2', withRound({ turns: [{ player: 3, sentence: { id: 'a', text: 'x' }, learning: 'en' }], index: 0 })],
     ['a sentence without text', withRound({ turns: [{ player: 1, sentence: { id: 'a', text: '  ' }, learning: 'en' }], index: 0 })],
     ['a very long sentence', withRound({ turns: [{ player: 1, sentence: { id: 'a', text: 'x'.repeat(301) }, learning: 'en' }], index: 0 })],
+    ['a game without its reveal flag', withRound({ revealed: undefined })],
+    ['a reveal flag that is not a boolean', withRound({ revealed: 'yes' })],
+    ['a translation that is not text', withRound({ turns: [{ player: 1, sentence: { id: 'a', text: 'x', translation: 5 }, learning: 'en' }], index: 0 })],
+    ['a very long translation', withRound({ turns: [{ player: 1, sentence: { id: 'a', text: 'x', translation: 'x'.repeat(301) }, learning: 'en' }], index: 0 })],
     ['too many turns', withRound({ turns: Array.from({ length: 21 }, () => ({ player: 1, sentence: { id: 'a', text: 'x' }, learning: 'en' })), index: 0 })],
   ])('rejects a state with %s', (_name, state) => {
     expect(parseHostMessage({ type: 'state', state })).toBeNull()

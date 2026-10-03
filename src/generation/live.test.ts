@@ -19,13 +19,33 @@ describe.skipIf(!url)('the real Worker', () => {
   }
 
   it('generates sentences for a preset topic in one language', async () => {
-    const sentences = await live().generate({ language: 'de', topic: { kind: 'preset', id: 'weather' }, fresh: false })
-    console.log('preset (de):', sentences)
-    expect(sentences).toHaveLength(2)
+    const answer = await live().generate({
+      language: 'de',
+      topic: { kind: 'preset', id: 'weather' },
+      fresh: false,
+      count: 2,
+      translate: false,
+    })
+    console.log('preset (de):', answer)
+    expect(answer.sentences).toHaveLength(2)
+  }, 30_000)
+
+  it('generates sentences with translations, in the number the host chose', async () => {
+    const answer = await live().generate({
+      language: 'de',
+      topic: { kind: 'preset', id: 'weather' },
+      fresh: true,
+      count: 3,
+      translate: true,
+    })
+    console.log('translated (de):', answer)
+    expect(answer.sentences).toHaveLength(3)
+    expect(answer.translations).toHaveLength(3)
   }, 30_000)
 
   it('generates both languages of a round for a custom topic', async () => {
-    const result = await generateForPair(live(), ['en', 'de'], { kind: 'custom', text: 'a rainy day at the beach' }, false)
+    const options = { count: 2, translate: false }
+    const result = await generateForPair(live(), ['en', 'de'], { kind: 'custom', text: 'a rainy day at the beach' }, false, options)
     console.log('custom round:', result)
     expect(result.de).toHaveLength(2)
     expect(result.en).toHaveLength(2)
@@ -33,7 +53,7 @@ describe.skipIf(!url)('the real Worker', () => {
 
   it('refuses an invalid request without spending the AI', async () => {
     await expect(
-      live().generate({ language: 'de', topic: { kind: 'custom', text: 'x'.repeat(61) }, fresh: false }),
+      live().generate({ language: 'de', topic: { kind: 'custom', text: 'x'.repeat(61) }, fresh: false, count: 2, translate: false }),
     ).rejects.toMatchObject({ kind: 'invalid' })
   }, 30_000)
 })

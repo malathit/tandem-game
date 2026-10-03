@@ -1,11 +1,11 @@
 import type { LanguagePair } from '../content/types'
 import type { SentencesByLanguage } from '../game/buildTurns'
-import type { GenerateRequest, GenerateTopic, GenerationErrorKind } from './types'
-import { parseModelOutput } from './validate'
+import type { GenerateRequest, GenerateTopic, GeneratedSentences, GenerationErrorKind, RoundOptions } from './types'
+import { parseModelOutput, parseTranslatedOutput } from './validate'
 
 const DEFAULT_TIMEOUT_MS = 20_000
-/** A real answer is a few hundred characters; anything far bigger is not from our Worker. */
-const MAX_RESPONSE_CHARS = 4096
+/** A real answer is at most a few thousand characters (5 sentences with translations); anything far bigger is not from our Worker. */
+const MAX_RESPONSE_CHARS = 8192
 
 export class GenerationError extends Error {
   readonly kind: GenerationErrorKind
@@ -19,7 +19,7 @@ export class GenerationError extends Error {
 
 /** Where generated sentences come from. Rejects with a `GenerationError`. */
 export interface SentenceGenerator {
-  generate(request: GenerateRequest, signal?: AbortSignal): Promise<string[]>
+  generate(request: GenerateRequest, signal?: AbortSignal): Promise<GeneratedSentences>
 }
 
 interface HttpOptions {
@@ -42,6 +42,21 @@ function failureKind(status: number, text: string): GenerationErrorKind {
     }
   }
   return 'unavailable'
+}
+
+/** Re-checks an answer with the same rules as the Worker; a translated answer must carry its translations. */
+function checked(body: Record<string, unknown>, { language, count, translate }: GenerateRequest): GeneratedSentences {
+  if (!translate) {
+    const parsed = parseModelOutput(body.sentences, language, count)
+    if (!parsed.ok) throw new GenerationError('invalid')
+    return { sentences: parsed.sentences }
+  }
+  const { sentences, translations } = body
+  if (!Array.isArray(sentences) || !Array.isArray(translations)) throw new GenerationError('invalid')
+  const pairs = sentences.map((text, i) => ({ text, translation: translations[i] }))
+  const parsed = parseTranslatedOutput(pairs, language, count)
+  if (!parsed.ok) throw new GenerationError('invalid')
+  return { sentences: parsed.sentences, translations: parsed.translations }
 }
 
 /** Calls the Worker over HTTP and re-checks everything it sends back. */
@@ -88,9 +103,7 @@ export function createHttpGenerator(
         throw new GenerationError('invalid')
       }
       if (!isRecord(body) || !Array.isArray(body.sentences)) throw new GenerationError('invalid')
-      const parsed = parseModelOutput(body.sentences, request.language)
-      if (!parsed.ok) throw new GenerationError('invalid')
-      return parsed.sentences
+      return checked(body, request)
     },
   }
 }
@@ -104,6 +117,7 @@ export async function generateForPair(
   pair: LanguagePair,
   topic: GenerateTopic,
   fresh: boolean,
+  options: RoundOptions,
   signal?: AbortSignal,
 ): Promise<SentencesByLanguage> {
   if (signal?.aborted) throw new GenerationError('cancelled')
@@ -115,8 +129,18 @@ export async function generateForPair(
     const entries = await Promise.all(
       pair.map(async (language) => {
         try {
-          const texts = await generator.generate({ language, topic, fresh }, controller.signal)
-          return [language, texts.map((text, i) => ({ id: `ai-${language}-${i + 1}`, text }))] as const
+          const { sentences, translations } = await generator.generate(
+            { language, topic, fresh, ...options },
+            controller.signal,
+          )
+          return [
+            language,
+            sentences.map((text, i) => ({
+              id: `ai-${language}-${i + 1}`,
+              text,
+              ...(translations && { translation: translations[i] }),
+            })),
+          ] as const
         } catch (error) {
           controller.abort()
           throw error

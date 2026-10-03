@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { staticSource } from '../content/staticSource'
 import type { Language, LanguageCode } from '../content/types'
 import type { SentenceGenerator } from '../generation/generator'
+import { DEFAULT_ROUND_OPTIONS } from '../generation/types'
 import { topicName } from '../game/topicName'
 import { useRoundSetup } from '../game/useRoundSetup'
 import type { Network } from '../online/network'
@@ -28,6 +30,7 @@ export function HostRoom({ network, languages, hostLearning, generator, onLeave 
   const { guestLearning, round } = room
   const pair = guestLearning === null ? null : ([room.hostLearning, guestLearning] as const)
   const setup = useRoundSetup(pair, generator)
+  const [options, setOptions] = useState(DEFAULT_ROUND_OPTIONS)
   const step = pair === null ? 1 : round === null ? 2 : 3
 
   function renderBody() {
@@ -90,7 +93,12 @@ export function HostRoom({ network, languages, hostLearning, generator, onLeave 
               AI sentences aren't available in this version of the game, so there is nothing to play yet.
             </p>
           ) : (
-            <TopicPicker topics={staticSource.getTopics()} onSelect={setup.choose} />
+            <TopicPicker
+              topics={staticSource.getTopics()}
+              options={options}
+              onOptionsChange={setOptions}
+              onSelect={(topic) => setup.choose(topic, options)}
+            />
           )}
         </>
       )
@@ -107,10 +115,11 @@ export function HostRoom({ network, languages, hostLearning, generator, onLeave 
           languages={languages}
           canAct={myTurn}
           onNext={() => dispatch({ type: 'NEXT_TURN', from: 1 })}
+          onReveal={() => dispatch({ type: 'REVEAL', from: 1 })}
           onPlayAgain={() => {
             // Review again, so the topic gets new sentences rather than the same ones.
             dispatch({ type: 'CHANGE_TOPIC' })
-            setup.choose(round.topic)
+            setup.choose(round.topic, options)
           }}
         />
       </>

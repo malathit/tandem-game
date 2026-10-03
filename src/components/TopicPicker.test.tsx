@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { DEFAULT_ROUND_OPTIONS, type RoundOptions } from '../generation/types'
 import type { Topic } from '../content/types'
 import { TopicPicker } from './TopicPicker'
 
@@ -9,13 +10,22 @@ const topics: Topic[] = [
   { id: 'weather', name: 'Weather' },
 ]
 
-function setup(props: { topics?: Topic[] } = {}) {
+function setup(props: { topics?: Topic[]; options?: RoundOptions } = {}) {
   const onSelect = vi.fn()
+  const onOptionsChange = vi.fn()
   const user = userEvent.setup()
-  render(<TopicPicker topics={props.topics ?? topics} onSelect={onSelect} />)
+  render(
+    <TopicPicker
+      topics={props.topics ?? topics}
+      options={props.options ?? DEFAULT_ROUND_OPTIONS}
+      onOptionsChange={onOptionsChange}
+      onSelect={onSelect}
+    />,
+  )
   return {
     user,
     onSelect,
+    onOptionsChange,
     input: screen.getByLabelText('Or enter your own topic'),
     useButton: screen.getByRole('button', { name: 'Use this topic' }),
   }
@@ -61,5 +71,37 @@ describe('TopicPicker', () => {
   it('limits the length of a custom topic', () => {
     const { input } = setup()
     expect(input).toHaveAttribute('maxlength', '60')
+  })
+
+  describe('round options', () => {
+    it('starts with two sentences per player and no translations', () => {
+      setup()
+      expect(screen.getByLabelText('Sentences per player')).toHaveValue('2')
+      expect(screen.getByLabelText('Show the translation after each turn')).not.toBeChecked()
+    })
+
+    it('offers one to five sentences per player', () => {
+      setup()
+      const options = within(screen.getByLabelText('Sentences per player')).getAllByRole('option')
+      expect(options.map((option) => option.textContent)).toEqual(['1', '2', '3', '4', '5'])
+    })
+
+    it('reports a new number of sentences, keeping the translation choice', async () => {
+      const { user, onOptionsChange } = setup({ options: { count: 2, translate: true } })
+      await user.selectOptions(screen.getByLabelText('Sentences per player'), '5')
+      expect(onOptionsChange).toHaveBeenCalledExactlyOnceWith({ count: 5, translate: true })
+    })
+
+    it('reports turning translations on, keeping the number of sentences', async () => {
+      const { user, onOptionsChange } = setup({ options: { count: 4, translate: false } })
+      await user.click(screen.getByLabelText('Show the translation after each turn'))
+      expect(onOptionsChange).toHaveBeenCalledExactlyOnceWith({ count: 4, translate: true })
+    })
+
+    it('shows the options it is given', () => {
+      setup({ options: { count: 3, translate: true } })
+      expect(screen.getByLabelText('Sentences per player')).toHaveValue('3')
+      expect(screen.getByLabelText('Show the translation after each turn')).toBeChecked()
+    })
   })
 })

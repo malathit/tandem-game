@@ -42,6 +42,8 @@ export function useHostSession(network: Network, hostLearning: LanguageCode): Ho
           dispatch({ type: 'GUEST_HELLO', learning: message.learning })
         } else if (message?.type === 'next-turn') {
           dispatch({ type: 'NEXT_TURN', from: 2 })
+        } else if (message?.type === 'reveal') {
+          dispatch({ type: 'REVEAL', from: 2 })
         }
       })
       connection.onClose(() => {

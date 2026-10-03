@@ -1,5 +1,5 @@
 import type { LanguageCode } from '../content/types'
-import { SENTENCE_COUNT } from './types'
+import { DEFAULT_COUNT } from './types'
 
 const MIN_WORDS = 3
 const MAX_WORDS = 14
@@ -70,16 +70,16 @@ function problemWith(sentence: string, language: LanguageCode): Failure | null {
 
 /**
  * Checks what a model (or the server) returned and turns it into exactly
- * `SENTENCE_COUNT` clean sentences in `language`. Both the Worker and the
+ * `count` clean sentences in `language`. Both the Worker and the
  * browser use it, and it never throws.
  */
-export function parseModelOutput(raw: unknown, language: LanguageCode): ParseResult {
+export function parseModelOutput(raw: unknown, language: LanguageCode, count: number = DEFAULT_COUNT): ParseResult {
   const candidate = extractCandidate(raw)
   if (candidate === undefined || candidate === null) return { ok: false, reason: 'not-json' }
 
   const list = listOf(candidate)
   if (list === null || list.some((item) => typeof item !== 'string')) return { ok: false, reason: 'bad-shape' }
-  if (list.length !== SENTENCE_COUNT) return { ok: false, reason: 'wrong-count' }
+  if (list.length !== count) return { ok: false, reason: 'wrong-count' }
 
   const sentences = (list as string[]).map((sentence) => sentence.trim())
   for (const sentence of sentences) {
@@ -92,3 +92,38 @@ export function parseModelOutput(raw: unknown, language: LanguageCode): ParseRes
 
   return { ok: true, sentences }
 }
+
+export type ParseTranslatedResult =
+  | { ok: true; sentences: string[]; translations: string[] }
+  | { ok: false; reason: Failure }
+
+const otherLanguage = (language: LanguageCode): LanguageCode => (language === 'de' ? 'en' : 'de')
+
+/**
+ * Like `parseModelOutput`, for sentences that come with a translation: a list of
+ * `{ text, translation }`, bare or inside `{ "sentences": [...] }`. The sentences
+ * must be in `language` and the translations in the other one, and both must pass every check.
+ */
+export function parseTranslatedOutput(raw: unknown, language: LanguageCode, count: number = DEFAULT_COUNT): ParseTranslatedResult {
+  const candidate = extractCandidate(raw)
+  if (candidate === undefined || candidate === null) return { ok: false, reason: 'not-json' }
+
+  const list = listOf(candidate)
+  if (list === null) return { ok: false, reason: 'bad-shape' }
+  const pairs = list.map((item) =>
+    isPair(item) ? { text: item.text, translation: item.translation } : null,
+  )
+  if (pairs.some((pair) => pair === null)) return { ok: false, reason: 'bad-shape' }
+
+  const written = parseModelOutput(pairs.map((pair) => pair?.text), language, count)
+  if (!written.ok) return written
+  const translated = parseModelOutput(pairs.map((pair) => pair?.translation), otherLanguage(language), count)
+  if (!translated.ok) return translated
+  return { ok: true, sentences: written.sentences, translations: translated.sentences }
+}
+
+const isPair = (item: unknown): item is { text: string; translation: string } =>
+  typeof item === 'object' &&
+  item !== null &&
+  typeof (item as Record<string, unknown>).text === 'string' &&
+  typeof (item as Record<string, unknown>).translation === 'string'

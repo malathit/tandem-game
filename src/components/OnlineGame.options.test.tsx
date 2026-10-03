@@ -1,0 +1,113 @@
+import { waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it } from 'vitest'
+import { createGame, joinGame, sentenceOn } from '../test/devices'
+import { english, instantGenerator } from '../test/generators'
+import { createMemoryNetwork } from '../test/memoryNetwork'
+
+async function start() {
+  const user = userEvent.setup()
+  const network = createMemoryNetwork()
+  const { generator, asked } = instantGenerator()
+  const host = await createGame(network, user, generator)
+  const guest = await joinGame(network, user, host.code)
+  await host.ui.findByRole('button', { name: 'Greetings and small talk' })
+  return { user, host, guest, asked }
+}
+
+describe('round options', () => {
+  it('plays two sentences each, without translations, unless the host chooses otherwise', async () => {
+    const { user, host, asked } = await start()
+    await user.click(host.ui.getByRole('button', { name: 'Greetings and small talk' }))
+    await host.ui.findByRole('heading', { name: 'Review the sentences' })
+    expect(asked.every((request) => request.count === 2 && !request.translate)).toBe(true)
+    await user.click(host.ui.getByRole('button', { name: 'Start round' }))
+    await host.ui.findByText('Turn 1 of 4')
+    expect(host.ui.queryByRole('button', { name: 'Show translation' })).not.toBeInTheDocument()
+  })
+
+  it('plays as many turns as the host chose', async () => {
+    const { user, host, guest, asked } = await start()
+    await user.selectOptions(host.ui.getByLabelText('Sentences per player'), '5')
+    await user.click(host.ui.getByRole('button', { name: 'Greetings and small talk' }))
+    await host.ui.findByRole('heading', { name: 'Review the sentences' })
+    expect(asked.every((request) => request.count === 5)).toBe(true)
+    expect(host.container.querySelectorAll('.preview-list li')).toHaveLength(10)
+    await user.click(host.ui.getByRole('button', { name: 'Start round' }))
+    await host.ui.findByText('Turn 1 of 10')
+    await guest.ui.findByText('Turn 1 of 10')
+  })
+
+  describe('with translations', () => {
+    async function startTranslated() {
+      const game = await start()
+      await game.user.click(game.host.ui.getByLabelText('Show the translation after each turn'))
+      await game.user.click(game.host.ui.getByRole('button', { name: 'Greetings and small talk' }))
+      await game.host.ui.findByRole('heading', { name: 'Review the sentences' })
+      return game
+    }
+
+    it('shows the translation in the review', async () => {
+      const { host, asked } = await startTranslated()
+      expect(asked.every((request) => request.translate)).toBe(true)
+      for (const sentence of english.slice(0, 2)) expect(host.ui.getAllByText(sentence).length).toBeGreaterThan(0)
+    })
+
+    it('hides it from both players until the speaker shows it, then moves on', async () => {
+      const { user, host, guest } = await startTranslated()
+      await user.click(host.ui.getByRole('button', { name: 'Start round' }))
+      await host.ui.findByText('Turn 1 of 4')
+      await guest.ui.findByText('Turn 1 of 4')
+
+      // Player 1 (host) reads German and translates into English; the translation is English.
+      expect(host.ui.queryByText('Translation')).not.toBeInTheDocument()
+      expect(guest.ui.queryByText('Translation')).not.toBeInTheDocument()
+      expect(host.ui.queryByRole('button', { name: 'Next turn' })).not.toBeInTheDocument()
+      expect(guest.ui.queryByRole('button', { name: /Show translation|Next turn/ })).not.toBeInTheDocument()
+
+      await user.click(host.ui.getByRole('button', { name: 'Show translation' }))
+      await host.ui.findByText('Translation')
+      await guest.ui.findByText('Translation')
+      expect(guest.container.querySelector('.translation')?.textContent).toBe(
+        host.container.querySelector('.translation')?.textContent,
+      )
+
+      await user.click(host.ui.getByRole('button', { name: 'Next turn' }))
+      await guest.ui.findByText('Turn 2 of 4')
+      // The next turn is the guest's, and the translation is hidden again.
+      expect(host.ui.queryByText('Translation')).not.toBeInTheDocument()
+      await waitFor(() => expect(guest.ui.getByRole('button', { name: 'Show translation' })).toBeInTheDocument())
+      expect(sentenceOn(guest)).toBe(sentenceOn(host))
+    })
+
+    it('lets the guest show the translation on their own turn', async () => {
+      const { user, host, guest } = await startTranslated()
+      await user.click(host.ui.getByRole('button', { name: 'Start round' }))
+      await host.ui.findByText('Turn 1 of 4')
+      await user.click(host.ui.getByRole('button', { name: 'Show translation' }))
+      await user.click(host.ui.getByRole('button', { name: 'Next turn' }))
+      await guest.ui.findByText('Turn 2 of 4')
+      await user.click(await guest.ui.findByRole('button', { name: 'Show translation' }))
+      await host.ui.findByText('Translation')
+      await user.click(guest.ui.getByRole('button', { name: 'Next turn' }))
+      await host.ui.findByText('Turn 3 of 4')
+    })
+
+    it('plays a whole round, showing each translation first, and keeps the options for Play again', async () => {
+      const { user, host, guest, asked } = await startTranslated()
+      await user.click(host.ui.getByRole('button', { name: 'Start round' }))
+      await host.ui.findByText('Turn 1 of 4')
+      for (const device of [host, guest, host, guest]) {
+        await user.click(await device.ui.findByRole('button', { name: 'Show translation' }))
+        await user.click(await device.ui.findByRole('button', { name: /next turn|finish round/i }))
+      }
+      await host.ui.findByRole('heading', { name: 'Round complete' })
+
+      asked.length = 0
+      await user.click(host.ui.getByRole('button', { name: 'Play again' }))
+      await host.ui.findByRole('heading', { name: 'Review the sentences' })
+      await waitFor(() => expect(asked).toHaveLength(2))
+      expect(asked.every((request) => request.translate && request.count === 2 && request.fresh === false)).toBe(true)
+    })
+  })
+})

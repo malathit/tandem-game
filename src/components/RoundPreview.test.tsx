@@ -20,6 +20,7 @@ type Preview = Extract<RoundSetup, { phase: 'preview' }>
 const setup = (overrides: Partial<Preview> = {}): Preview => ({
   phase: 'preview',
   topic: { kind: 'preset', id: 'greetings' },
+  options: { count: 2, translate: false },
   turns,
   busy: false,
   error: null,
@@ -42,6 +43,14 @@ describe('RoundPreview', () => {
     expect(items[0]).toHaveTextContent('English')
     expect(items[1]).toHaveTextContent('Player 2')
     expect(items[1]).toHaveTextContent('German')
+  })
+
+  it('shows the translation under each sentence when there are some', () => {
+    const translatedTurns = turns.map((turn) => ({ ...turn, sentence: { ...turn.sentence, translation: `${turn.sentence.text} (translated)` } }))
+    show(setup({ turns: translatedTurns }))
+    const items = within(screen.getByRole('list')).getAllByRole('listitem')
+    expect(items[0]).toHaveTextContent('Ich kann gut schwimmen. (translated)')
+    expect(items[1]).toHaveTextContent('She can swim very well. (translated)')
   })
 
   it('names the topic and says the sentences were written by AI', () => {

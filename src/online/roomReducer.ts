@@ -8,6 +8,7 @@ export type RoomEvent =
   | { type: 'START_ROUND'; topic: string; turns: Turn[] }
   | { type: 'CHANGE_TOPIC' }
   | { type: 'NEXT_TURN'; from: 1 | 2 }
+  | { type: 'REVEAL'; from: 1 | 2 }
 
 export const createRoom = (hostLearning: LanguageCode): RoomState => ({
   hostLearning,
@@ -30,12 +31,13 @@ export function roomReducer(state: RoomState, event: RoomEvent): RoomState {
     case 'CHANGE_TOPIC':
       return { ...state, round: null }
 
-    case 'NEXT_TURN': {
+    case 'NEXT_TURN':
+    case 'REVEAL': {
       const { round } = state
       if (round === null || round.game.status !== 'playing') return state
-      // Only the player whose turn it is may move the game on.
+      // Only the player whose turn it is may move the game on or show the translation.
       if (round.game.turns[round.game.index].player !== event.from) return state
-      return { ...state, round: { ...round, game: gameReducer(round.game, { type: 'NEXT_TURN' }) } }
+      return { ...state, round: { ...round, game: gameReducer(round.game, { type: event.type }) } }
     }
   }
 }

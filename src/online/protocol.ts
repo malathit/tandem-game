@@ -13,7 +13,7 @@ export interface RoomState {
 
 export type HostMessage = { type: 'state'; state: RoomState }
 
-export type GuestMessage = { type: 'hello'; learning: LanguageCode } | { type: 'next-turn' }
+export type GuestMessage = { type: 'hello'; learning: LanguageCode } | { type: 'next-turn' } | { type: 'reveal' }
 
 // Messages come from another device, so nothing in them is trusted: each parser
 // checks the shape and size of the data and returns null for anything else.
@@ -35,9 +35,15 @@ function parseTurn(raw: unknown): Turn | null {
   if (!isRecord(sentence) || !isText(sentence.id) || !isText(sentence.text)) {
     return null
   }
+  // The translation is optional, but if it is there it has to be real text.
+  if (sentence.translation !== undefined && !isText(sentence.translation)) return null
   return {
     player: raw.player,
-    sentence: { id: sentence.id, text: sentence.text },
+    sentence: {
+      id: sentence.id,
+      text: sentence.text,
+      ...(sentence.translation !== undefined && { translation: sentence.translation }),
+    },
     learning: raw.learning,
   }
 }
@@ -52,11 +58,12 @@ function parseGame(raw: unknown): GameState | null {
     if (!turn) return null
     turns.push(turn)
   }
-  const { index, status } = raw
+  const { index, status, revealed } = raw
   if (status !== 'playing' && status !== 'finished') return null
+  if (typeof revealed !== 'boolean') return null
   if (typeof index !== 'number' || !Number.isInteger(index) || index < 0) return null
   if (index >= Math.max(turns.length, 1)) return null
-  return { turns, index, status }
+  return { turns, index, status, revealed }
 }
 
 function parseRoomState(raw: unknown): RoomState | null {
@@ -82,6 +89,7 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
 export function parseGuestMessage(raw: unknown): GuestMessage | null {
   if (!isRecord(raw)) return null
   if (raw.type === 'next-turn') return { type: 'next-turn' }
+  if (raw.type === 'reveal') return { type: 'reveal' }
   if (raw.type === 'hello' && isLanguageCode(raw.learning)) {
     return { type: 'hello', learning: raw.learning }
   }

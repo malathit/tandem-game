@@ -7,6 +7,8 @@ export const TOPIC = 'Greetings and small talk'
 export interface Turn {
   player: 1 | 2
   text: string
+  /** Only when the host asked for translations. */
+  translation?: string
 }
 
 export interface Game {
@@ -38,14 +40,18 @@ export async function startGame(browser: Browser): Promise<Game> {
 }
 
 /** The sentences on the review screen, in the order they will be played. */
-export async function reviewedTurns(host: Page): Promise<Turn[]> {
+export async function reviewedTurns(host: Page, expected = 4): Promise<Turn[]> {
   const items = host.locator('.preview-list li')
-  await expect(items).toHaveCount(4)
+  await expect(items).toHaveCount(expected)
   return items.evaluateAll((elements) =>
     elements.map((element) => ({
       player: Number((element as HTMLElement).dataset.player) as 1 | 2,
-      // The sentence is the text after the "Player N translates into …" label.
-      text: element.lastChild?.textContent ?? '',
+      // The sentence is the text node between the "Player N translates into …" label and the translation.
+      text: [...element.childNodes]
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent)
+        .join(''),
+      translation: element.querySelector('.preview-translation')?.textContent ?? undefined,
     })),
   )
 }
@@ -56,6 +62,14 @@ export async function playRound({ host, guest }: Game, turns: Turn[]) {
     await expect(host.locator('.sentence')).toHaveText(turn.text)
     await expect(guest.locator('.sentence')).toHaveText(turn.text)
     const mover = turn.player === 1 ? host : guest
+    if (turn.translation !== undefined) {
+      // Hidden from both until the speaker shows it.
+      await expect(host.locator('.translation')).toHaveCount(0)
+      await expect(guest.locator('.translation')).toHaveCount(0)
+      await mover.getByRole('button', { name: 'Show translation' }).click()
+      await expect(host.locator('.translation')).toContainText(turn.translation)
+      await expect(guest.locator('.translation')).toContainText(turn.translation)
+    }
     await mover.getByRole('button', { name: index === turns.length - 1 ? 'Finish round' : 'Next turn' }).click()
   }
   await expect(host.getByRole('heading', { name: 'Round complete' })).toBeVisible()

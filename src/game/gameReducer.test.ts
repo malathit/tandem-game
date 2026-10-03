@@ -10,7 +10,7 @@ const turns: Turn[] = [
 
 describe('createGame', () => {
   it('starts on the first turn', () => {
-    expect(createGame(turns)).toEqual({ turns, index: 0, status: 'playing' })
+    expect(createGame(turns)).toEqual({ turns, index: 0, status: 'playing', revealed: false })
   })
 
   it('is finished straight away when there are no turns', () => {
@@ -21,7 +21,7 @@ describe('createGame', () => {
 describe('gameReducer', () => {
   it('moves to the next turn', () => {
     const next = gameReducer(createGame(turns), { type: 'NEXT_TURN' })
-    expect(next).toEqual({ turns, index: 1, status: 'playing' })
+    expect(next).toEqual({ turns, index: 1, status: 'playing', revealed: false })
   })
 
   it('finishes after the last turn and stays on it', () => {
@@ -30,11 +30,11 @@ describe('gameReducer', () => {
     state = gameReducer(state, { type: 'NEXT_TURN' })
     expect(state.status).toBe('playing')
     state = gameReducer(state, { type: 'NEXT_TURN' })
-    expect(state).toEqual({ turns, index: 2, status: 'finished' })
+    expect(state).toEqual({ turns, index: 2, status: 'finished', revealed: false })
   })
 
   it('ignores NEXT_TURN once the game is finished', () => {
-    const finished = { turns, index: 2, status: 'finished' } as const
+    const finished = { turns, index: 2, status: 'finished', revealed: false } as const
     expect(gameReducer(finished, { type: 'NEXT_TURN' })).toBe(finished)
   })
 
@@ -42,5 +42,32 @@ describe('gameReducer', () => {
     const state = createGame(turns)
     gameReducer(state, { type: 'NEXT_TURN' })
     expect(state.index).toBe(0)
+  })
+})
+
+describe('revealing the translation', () => {
+  const translated: Turn[] = turns.map((turn) => ({ ...turn, sentence: { ...turn.sentence, translation: `${turn.sentence.text}!` } }))
+
+  it('shows the translation of the current turn', () => {
+    expect(gameReducer(createGame(translated), { type: 'REVEAL' }).revealed).toBe(true)
+  })
+
+  it('hides it again on the next turn, and when the round ends', () => {
+    let state = gameReducer(createGame(translated), { type: 'REVEAL' })
+    state = gameReducer(state, { type: 'NEXT_TURN' })
+    expect(state).toMatchObject({ index: 1, revealed: false })
+    state = gameReducer(gameReducer(state, { type: 'REVEAL' }), { type: 'NEXT_TURN' })
+    state = gameReducer(gameReducer(state, { type: 'REVEAL' }), { type: 'NEXT_TURN' })
+    expect(state).toMatchObject({ status: 'finished', revealed: false })
+  })
+
+  it('does nothing when the turn has no translation', () => {
+    const state = createGame(turns)
+    expect(gameReducer(state, { type: 'REVEAL' })).toBe(state)
+  })
+
+  it('does nothing once the game is finished', () => {
+    const finished = { turns: translated, index: 2, status: 'finished', revealed: false } as const
+    expect(gameReducer(finished, { type: 'REVEAL' })).toBe(finished)
   })
 })

@@ -25,7 +25,7 @@ const PROBLEMS: Record<Exclude<GuestSession['status'], 'connecting' | 'connected
 
 /** The device that joined: it is Player 2 and shows what the host says is happening. */
 export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onLeave }: GuestRoomProps) {
-  const { status, room, chooseLanguage, nextTurn } = useGuestSession(network, code)
+  const { status, room, chooseLanguage, nextTurn, reveal } = useGuestSession(network, code)
 
   function renderBody() {
     if (status === 'connecting') {
@@ -92,7 +92,7 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
       <>
         <PlayerChips pair={pair} languages={languages} me={2} />
         <p className="topic">Topic: {topicName(staticSource, round.topic)}</p>
-        <TurnView game={game} languages={languages} canAct={myTurn} onNext={nextTurn} />
+        <TurnView game={game} languages={languages} canAct={myTurn} onNext={nextTurn} onReveal={reveal} />
       </>
     )
   }

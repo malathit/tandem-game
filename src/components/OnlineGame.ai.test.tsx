@@ -19,7 +19,7 @@ function slowGenerator() {
       signals.push(signal)
       await gate
       if (signal?.aborted) throw new GenerationError('cancelled')
-      return answers[request.language as 'de' | 'en']
+      return { sentences: answers[request.language as 'de' | 'en'] }
     },
   }
   return { generator, signals, release }

@@ -9,6 +9,7 @@ export interface GuestSession {
   room: RoomState | null
   chooseLanguage: (learning: LanguageCode) => void
   nextTurn: () => void
+  reveal: () => void
 }
 
 /** Joins a room and shows whatever the host says the game looks like. */
@@ -57,5 +58,6 @@ export function useGuestSession(network: Network, code: string): GuestSession {
     room,
     chooseLanguage: useCallback((learning) => send({ type: 'hello', learning }), [send]),
     nextTurn: useCallback(() => send({ type: 'next-turn' }), [send]),
+    reveal: useCallback(() => send({ type: 'reveal' }), [send]),
   }
 }
