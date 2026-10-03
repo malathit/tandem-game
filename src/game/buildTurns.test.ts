@@ -1,17 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { ContentSource, Sentence } from '../content/types'
-import { buildTurns, sentencesFor } from './buildTurns'
+import type { Sentence } from '../content/types'
+import { buildTurns } from './buildTurns'
 
 const make = (prefix: string, count: number): Sentence[] =>
   Array.from({ length: count }, (_, i) => ({ id: `${prefix}${i + 1}`, text: `${prefix} ${i + 1}` }))
-
-function sourceOf(data: Record<string, Sentence[]>): ContentSource {
-  return {
-    getLanguages: () => [],
-    getTopics: () => [],
-    getSentences: (language, topicId) => data[`${language}/${topicId}`] ?? [],
-  }
-}
 
 const sentences = {
   en: Object.freeze(make('en', 4)) as Sentence[],
@@ -62,17 +54,5 @@ describe('buildTurns', () => {
   it('does not change the lists it is given', () => {
     buildTurns(pair, sentences)
     expect(sentences.en.map((s) => s.id)).toEqual(['en1', 'en2', 'en3', 'en4'])
-  })
-})
-
-describe('sentencesFor', () => {
-  const source = sourceOf({ 'en/t': make('en', 2), 'de/t': make('de', 3) })
-
-  it('reads the sentences of both languages in the pair for a topic', () => {
-    expect(sentencesFor(source, pair, 't')).toEqual({ en: make('en', 2), de: make('de', 3) })
-  })
-
-  it('gives empty lists for an unknown topic', () => {
-    expect(sentencesFor(source, pair, 'something typed')).toEqual({ en: [], de: [] })
   })
 })

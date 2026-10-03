@@ -5,8 +5,8 @@ import type { Topic } from '../content/types'
 import { TopicPicker } from './TopicPicker'
 
 const topics: Topic[] = [
-  { id: 'modal-verbs', name: 'Modal verbs' },
-  { id: 'conjunctions', name: 'Conjunctions' },
+  { id: 'greetings', name: 'Greetings and small talk' },
+  { id: 'weather', name: 'Weather' },
 ]
 
 function setup(props: { topics?: Topic[] } = {}) {
@@ -24,21 +24,21 @@ function setup(props: { topics?: Topic[] } = {}) {
 describe('TopicPicker', () => {
   it('shows a button for each preset topic', () => {
     setup()
-    expect(screen.getByRole('button', { name: 'Modal verbs' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Conjunctions' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Greetings and small talk' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Weather' })).toBeInTheDocument()
   })
 
   it('reports the id of a preset topic when it is clicked', async () => {
     const { user, onSelect } = setup()
-    await user.click(screen.getByRole('button', { name: 'Conjunctions' }))
-    expect(onSelect).toHaveBeenCalledExactlyOnceWith('conjunctions')
+    await user.click(screen.getByRole('button', { name: 'Weather' }))
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith('weather')
   })
 
-  it('says so when the language pair has no preset topics but still allows a custom one', async () => {
+  it('says so when there are no preset topics but still allows a custom one', async () => {
     const { user, onSelect, input } = setup({ topics: [] })
     expect(screen.getByText(/no topics/i)).toBeInTheDocument()
-    await user.type(input, 'Weather{Enter}')
-    expect(onSelect).toHaveBeenCalledExactlyOnceWith('Weather')
+    await user.type(input, 'Football{Enter}')
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith('Football')
   })
 
   it('disables the custom topic button while the input is blank or only spaces', async () => {

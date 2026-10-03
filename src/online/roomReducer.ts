@@ -6,7 +6,6 @@ import type { RoomState } from './protocol'
 export type RoomEvent =
   | { type: 'GUEST_HELLO'; learning: LanguageCode }
   | { type: 'START_ROUND'; topic: string; turns: Turn[] }
-  | { type: 'PLAY_AGAIN'; turns: Turn[] }
   | { type: 'CHANGE_TOPIC' }
   | { type: 'NEXT_TURN'; from: 1 | 2 }
 
@@ -27,10 +26,6 @@ export function roomReducer(state: RoomState, event: RoomEvent): RoomState {
     case 'START_ROUND':
       if (state.guestLearning === null || event.turns.length === 0) return state
       return { ...state, round: { topic: event.topic, game: createGame(event.turns) } }
-
-    case 'PLAY_AGAIN':
-      if (state.round === null || event.turns.length === 0) return state
-      return { ...state, round: { ...state.round, game: createGame(event.turns) } }
 
     case 'CHANGE_TOPIC':
       return { ...state, round: null }

@@ -19,7 +19,7 @@ describe.skipIf(!url)('the real Worker', () => {
   }
 
   it('generates sentences for a preset topic in one language', async () => {
-    const sentences = await live().generate({ language: 'de', topic: { kind: 'preset', id: 'modal-verbs' }, fresh: false })
+    const sentences = await live().generate({ language: 'de', topic: { kind: 'preset', id: 'weather' }, fresh: false })
     console.log('preset (de):', sentences)
     expect(sentences).toHaveLength(2)
   }, 30_000)

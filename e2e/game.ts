@@ -1,6 +1,9 @@
 import { expect, type Browser, type Page } from '@playwright/test'
 import { SITE_URL } from '../playwright.config'
 
+/** A preset topic of the game. */
+export const TOPIC = 'Greetings and small talk'
+
 export interface Turn {
   player: 1 | 2
   text: string
@@ -30,7 +33,7 @@ export async function startGame(browser: Browser): Promise<Game> {
   await guest.getByRole('button', { name: 'Continue' }).click()
 
   // The host only sees the topics once the guest's choice has travelled over the real connection.
-  await expect(host.getByRole('button', { name: 'Modal verbs' })).toBeVisible({ timeout: 30_000 })
+  await expect(host.getByRole('button', { name: TOPIC })).toBeVisible({ timeout: 30_000 })
   return { host, guest }
 }
 

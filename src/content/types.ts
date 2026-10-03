@@ -22,15 +22,8 @@ export interface Sentence {
 
 export type LanguagePair = readonly [LanguageCode, LanguageCode]
 
-/**
- * Where the game gets its sentences from. Screens depend on this interface
- * only, so a different source (e.g. AI-generated) can replace the static one
- * without touching any component.
- */
+/** What screens need to know about the game's content: its languages and preset topics. */
 export interface ContentSource {
   getLanguages(): Language[]
-  /** Topics that have sentences in both languages of the pair. */
-  getTopics(pair: LanguagePair): Topic[]
-  /** Sentences written in `language` for the topic; empty if there are none. */
-  getSentences(language: LanguageCode, topicId: string): Sentence[]
+  getTopics(): Topic[]
 }

@@ -4,7 +4,7 @@ import { createHttpGenerator, generateForPair, GenerationError, type SentenceGen
 import type { GenerateRequest, GenerationErrorKind } from './types'
 
 const URL = 'https://worker.example/'
-const request: GenerateRequest = { language: 'de', topic: { kind: 'preset', id: 'modal-verbs' }, fresh: false }
+const request: GenerateRequest = { language: 'de', topic: { kind: 'preset', id: 'weather' }, fresh: false }
 const sentences = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.']
 
 type FetchFn = typeof fetch

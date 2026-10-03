@@ -4,6 +4,7 @@ import { staticSource } from '../content/staticSource'
 import type { Language } from '../content/types'
 import type { SentenceGenerator } from '../generation/generator'
 import { OnlineGame } from '../components/OnlineGame'
+import { instantGenerator } from './generators'
 import type { MemoryNetwork } from './memoryNetwork'
 
 export const languages: Language[] = staticSource.getLanguages()
@@ -19,9 +20,16 @@ export function open(network: MemoryNetwork, generator?: SentenceGenerator) {
 export const currentStep = (device: { container: HTMLElement }) =>
   device.container.querySelector('[aria-current="step"]')?.textContent
 
-/** A device that creates a game, learning English. Resolves once the code is shown. */
-export async function createGame(network: MemoryNetwork, user: User, generator?: SentenceGenerator) {
-  const device = open(network, generator)
+/**
+ * A device that creates a game, learning English. Resolves once the code is shown.
+ * It gets a generator that answers at once; pass `null` for a build without AI.
+ */
+export async function createGame(
+  network: MemoryNetwork,
+  user: User,
+  generator: SentenceGenerator | null = instantGenerator().generator,
+) {
+  const device = open(network, generator ?? undefined)
   await user.click(device.ui.getByRole('button', { name: 'Create a game' }))
   await user.selectOptions(device.ui.getByLabelText('I am learning'), 'en')
   await user.click(device.ui.getByRole('button', { name: 'Create game' }))
@@ -48,3 +56,9 @@ export async function joinGame(network: MemoryNetwork, user: User, code: string)
 export const sentenceOn = (device: { container: HTMLElement }) =>
   device.container.querySelector('.sentence')?.textContent
 
+
+/** The host picks a preset topic, looks at the review screen and starts the round. */
+export async function startRound(host: ReturnType<typeof open>, user: User, topic = 'Greetings and small talk') {
+  await user.click(await host.ui.findByRole('button', { name: topic }))
+  await user.click(await host.ui.findByRole('button', { name: 'Start round' }))
+}

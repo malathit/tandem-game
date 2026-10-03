@@ -1,4 +1,4 @@
-import type { ContentSource, LanguageCode, LanguagePair, Sentence } from '../content/types'
+import type { LanguageCode, LanguagePair, Sentence } from '../content/types'
 
 export interface Turn {
   player: 1 | 2
@@ -23,15 +23,6 @@ export const shuffled: Shuffle = (items) => {
     ;[result[i], result[j]] = [result[j], result[i]]
   }
   return result
-}
-
-/** The sentences of both languages in `pair` for one topic of a content source. */
-export function sentencesFor(
-  source: ContentSource,
-  pair: LanguagePair,
-  topicId: string,
-): SentencesByLanguage {
-  return Object.fromEntries(pair.map((language) => [language, source.getSentences(language, topicId)]))
 }
 
 /**

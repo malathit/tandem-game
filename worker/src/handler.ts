@@ -1,3 +1,4 @@
+import { PRESET_TOPICS } from '../../src/content/topics'
 import type { LanguageCode } from '../../src/content/types'
 import { parseGenerateRequest } from '../../src/generation/request'
 import type { GenerateRequest, GenerationErrorKind } from '../../src/generation/types'
@@ -54,8 +55,11 @@ function systemPrompt(language: LanguageCode): string {
 }
 
 function userPrompt({ language, topic }: GenerateRequest): string {
-  // A custom topic cannot contain angle brackets, so it cannot close the tag early.
-  const theme = topic.kind === 'preset' ? topic.id.replace(/-/g, ' ') : topic.text.replace(/[<>]/g, ' ')
+  // A custom topic cannot contain angle brackets, so it cannot close the tag early. A preset's hint is our own text.
+  const theme =
+    topic.kind === 'preset'
+      ? (PRESET_TOPICS.find((preset) => preset.id === topic.id)?.hint ?? topic.id)
+      : topic.text.replace(/[<>]/g, ' ')
   return `Language: ${LANGUAGE_NAMES[language]}\nTopic: <topic>${theme}</topic>`
 }
 
@@ -116,7 +120,7 @@ export function createHandler({ ai, kv, allowedOrigins, dailyCap = DEFAULT_DAILY
     return { error: 'invalid' }
   }
 
-  const poolKey = (language: LanguageCode, id: string) => `pool:v1:${language}:${id}`
+  const poolKey = (language: LanguageCode, id: string) => `pool:v2:${language}:${id}`
 
   /** Stored batches that are still valid; storage trouble or damaged data count as "none". */
   async function readPool(key: string, language: LanguageCode): Promise<string[][]> {

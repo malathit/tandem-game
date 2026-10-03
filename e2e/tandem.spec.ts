@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { parseModelOutput } from '../src/generation/validate'
-import { playRound, reviewedTurns, startGame, type Turn } from './game'
+import { playRound, reviewedTurns, startGame, TOPIC, type Turn } from './game'
 
 const WORKER = /workers\.dev/
 
@@ -16,25 +16,26 @@ function expectUsableSentences(turns: Turn[]) {
 const workerAnswered = (page: Page) =>
   page.waitForResponse((response) => WORKER.test(response.url()) && response.request().method() === 'POST' && response.ok())
 
-test('a preset topic: hand-written first, then fresh AI sentences from the Worker, then a played round', async ({ browser }) => {
+test('a preset topic is written by the AI, can be regenerated, and is played on both devices', async ({ browser }) => {
   const game = await startGame(browser)
   const { host } = game
 
-  await host.getByRole('button', { name: 'Modal verbs' }).click()
-  await expect(host.getByText('Hand-written sentences.')).toBeVisible()
-  const handWritten = await reviewedTurns(host)
-
   const answered = workerAnswered(host)
-  await host.getByRole('button', { name: 'Regenerate with AI' }).click()
+  await host.getByRole('button', { name: TOPIC }).click()
   await answered
   await expect(host.getByText(/Written by AI/)).toBeVisible({ timeout: 30_000 })
+  const first = await reviewedTurns(host)
+  expectUsableSentences(first)
 
-  const generated = await reviewedTurns(host)
-  expectUsableSentences(generated)
-  expect(generated.map((turn) => turn.text)).not.toEqual(handWritten.map((turn) => turn.text))
+  const again = workerAnswered(host)
+  await host.getByRole('button', { name: 'Regenerate with AI' }).click()
+  await again
+  await expect(host.getByRole('button', { name: 'Regenerate with AI' })).toBeEnabled({ timeout: 30_000 })
+  const second = await reviewedTurns(host)
+  expectUsableSentences(second)
 
   await host.getByRole('button', { name: 'Start round' }).click()
-  await playRound(game, generated)
+  await playRound(game, second)
 })
 
 test('a custom topic is written by the AI and played on both devices', async ({ browser }) => {
@@ -54,26 +55,22 @@ test('a custom topic is written by the AI and played on both devices', async ({ 
   await playRound(game, generated)
 })
 
-test('when the AI service cannot be reached, the host can still play the hand-written sentences', async ({ browser }) => {
-  const game = await startGame(browser)
-  const { host } = game
+test('when the AI service cannot be reached, the host is told and nothing starts', async ({ browser }) => {
+  const { host, guest } = await startGame(browser)
   await host.route(WORKER, (route) => route.abort())
 
-  // A custom topic has nothing to fall back on.
-  await host.getByLabel('Or enter your own topic').fill('A day at the beach')
-  await host.getByRole('button', { name: 'Use this topic' }).click()
-  await expect(host.getByRole('alert')).toContainText("can't be reached")
-  await expect(host.getByRole('button', { name: 'Try again' })).toBeVisible()
-  await expect(host.getByRole('button', { name: 'Start round' })).toHaveCount(0)
-  await host.getByRole('button', { name: 'Choose another topic' }).click()
-
-  // A preset keeps its hand-written sentences after a failed Regenerate.
-  await host.getByRole('button', { name: 'Modal verbs' }).click()
-  const handWritten = await reviewedTurns(host)
-  await host.getByRole('button', { name: 'Regenerate with AI' }).click()
-  await expect(host.getByRole('alert')).toContainText("can't be reached")
-  expect(await reviewedTurns(host)).toEqual(handWritten)
-
-  await host.getByRole('button', { name: 'Start round' }).click()
-  await playRound(game, handWritten)
+  for (const pick of [
+    () => host.getByRole('button', { name: TOPIC }).click(),
+    async () => {
+      await host.getByLabel('Or enter your own topic').fill('A day at the beach')
+      await host.getByRole('button', { name: 'Use this topic' }).click()
+    },
+  ]) {
+    await pick()
+    await expect(host.getByRole('alert')).toContainText("can't be reached")
+    await expect(host.getByRole('button', { name: 'Try again' })).toBeVisible()
+    await expect(host.getByRole('button', { name: 'Start round' })).toHaveCount(0)
+    await host.getByRole('button', { name: 'Choose another topic' }).click()
+  }
+  await expect(guest.getByText('Waiting for the host to choose a topic…')).toBeVisible()
 })

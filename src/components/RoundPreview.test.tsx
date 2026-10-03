@@ -19,9 +19,8 @@ const turns: Turn[] = [
 type Preview = Extract<RoundSetup, { phase: 'preview' }>
 const setup = (overrides: Partial<Preview> = {}): Preview => ({
   phase: 'preview',
-  topic: { kind: 'preset', id: 'modal-verbs' },
+  topic: { kind: 'preset', id: 'greetings' },
   turns,
-  fromAi: false,
   busy: false,
   error: null,
   ...overrides,
@@ -29,7 +28,7 @@ const setup = (overrides: Partial<Preview> = {}): Preview => ({
 
 function show(state: Preview) {
   const handlers = { onStart: vi.fn(), onRegenerate: vi.fn(), onCancel: vi.fn(), onBack: vi.fn() }
-  render(<RoundPreview setup={state} topicLabel="Modal verbs" languages={languages} {...handlers} />)
+  render(<RoundPreview setup={state} topicLabel="Greetings and small talk" languages={languages} {...handlers} />)
   return handlers
 }
 
@@ -45,15 +44,9 @@ describe('RoundPreview', () => {
     expect(items[1]).toHaveTextContent('German')
   })
 
-  it('names the topic and says where the sentences came from', () => {
-    const { rerender } = render(
-      <RoundPreview setup={setup()} topicLabel="Modal verbs" languages={languages} onStart={vi.fn()} onRegenerate={vi.fn()} onCancel={vi.fn()} onBack={vi.fn()} />,
-    )
-    expect(screen.getByText(/Modal verbs/)).toBeInTheDocument()
-    expect(screen.getByText(/hand-written/i)).toBeInTheDocument()
-    rerender(
-      <RoundPreview setup={setup({ fromAi: true })} topicLabel="Modal verbs" languages={languages} onStart={vi.fn()} onRegenerate={vi.fn()} onCancel={vi.fn()} onBack={vi.fn()} />,
-    )
+  it('names the topic and says the sentences were written by AI', () => {
+    show(setup())
+    expect(screen.getByText(/Greetings and small talk/)).toBeInTheDocument()
     expect(screen.getByText(/written by AI/i)).toBeInTheDocument()
     expect(screen.getByText(/can contain mistakes/i)).toBeInTheDocument()
   })

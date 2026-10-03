@@ -32,9 +32,9 @@ describe('normalizeTopic', () => {
 
 describe('parseGenerateRequest', () => {
   it('accepts a preset topic', () => {
-    expect(parseGenerateRequest({ language: 'de', topic: { kind: 'preset', id: 'modal-verbs' } })).toEqual({
+    expect(parseGenerateRequest({ language: 'de', topic: { kind: 'preset', id: 'weather' } })).toEqual({
       language: 'de',
-      topic: { kind: 'preset', id: 'modal-verbs' },
+      topic: { kind: 'preset', id: 'weather' },
       fresh: false,
     })
   })
@@ -48,15 +48,15 @@ describe('parseGenerateRequest', () => {
   it('only accepts preset ids from the allow-list, so nobody can create cache entries at will', () => {
     expect(parseGenerateRequest({ language: 'de', topic: { kind: 'preset', id: 'made-up' } })).toBeNull()
     expect(parseGenerateRequest({ language: 'de', topic: { kind: 'preset', id: '__proto__' } })).toBeNull()
-    expect(parseGenerateRequest({ language: 'de', topic: { kind: 'preset', id: 'modal-verbs/../x' } })).toBeNull()
+    expect(parseGenerateRequest({ language: 'de', topic: { kind: 'preset', id: 'weather/../x' } })).toBeNull()
   })
 
   it('rejects unknown languages and malformed bodies', () => {
-    const topic = { kind: 'preset', id: 'modal-verbs' }
+    const topic = { kind: 'preset', id: 'weather' }
     expect(parseGenerateRequest({ language: 'fr', topic })).toBeNull()
     expect(parseGenerateRequest({ topic })).toBeNull()
     expect(parseGenerateRequest({ language: 'de' })).toBeNull()
-    expect(parseGenerateRequest({ language: 'de', topic: { kind: 'other', id: 'modal-verbs' } })).toBeNull()
+    expect(parseGenerateRequest({ language: 'de', topic: { kind: 'other', id: 'weather' } })).toBeNull()
     expect(parseGenerateRequest({ language: 'de', topic: { kind: 'custom', text: '' } })).toBeNull()
     expect(parseGenerateRequest({ language: 'de', topic, fresh: 'yes' })).toBeNull()
     for (const junk of [null, undefined, 'text', 7, [], true]) expect(parseGenerateRequest(junk)).toBeNull()
@@ -65,17 +65,26 @@ describe('parseGenerateRequest', () => {
   it('ignores extra fields instead of passing them on', () => {
     const parsed = parseGenerateRequest({
       language: 'de',
-      topic: { kind: 'preset', id: 'conjunctions', extra: 1 },
+      topic: { kind: 'preset', id: 'greetings', extra: 1 },
       count: 500,
       model: 'something-else',
     })
-    expect(parsed).toEqual({ language: 'de', topic: { kind: 'preset', id: 'conjunctions' }, fresh: false })
+    expect(parsed).toEqual({ language: 'de', topic: { kind: 'preset', id: 'greetings' }, fresh: false })
   })
 })
 
 describe('PRESET_TOPIC_IDS', () => {
   it('covers every preset topic the game ships with', () => {
-    const shipped = staticSource.getTopics(['en', 'de']).map((topic) => topic.id)
+    const shipped = staticSource.getTopics().map((topic) => topic.id)
     expect([...PRESET_TOPIC_IDS].sort()).toEqual(shipped.sort())
+  })
+
+  it('accepts each of them and nothing from the retired topics', () => {
+    for (const id of PRESET_TOPIC_IDS) {
+      expect(parseGenerateRequest({ language: 'en', topic: { kind: 'preset', id } })).not.toBeNull()
+    }
+    for (const id of ['modal-verbs', 'conjunctions']) {
+      expect(parseGenerateRequest({ language: 'en', topic: { kind: 'preset', id } })).toBeNull()
+    }
   })
 })

@@ -76,18 +76,7 @@ describe('NEXT_TURN', () => {
   })
 })
 
-describe('PLAY_AGAIN and CHANGE_TOPIC', () => {
-  const fresh: Turn[] = [{ player: 1, sentence: { id: 'z', text: 'z' }, learning: 'en' }, turns[1]]
-
-  it('restarts the same topic with new turns', () => {
-    const room = roomReducer(playing, { type: 'PLAY_AGAIN', turns: fresh })
-    expect(room.round).toEqual({ topic: 'modal-verbs', game: { turns: fresh, index: 0, status: 'playing' } })
-  })
-
-  it('cannot play again before a round exists', () => {
-    expect(roomReducer(joined, { type: 'PLAY_AGAIN', turns: fresh })).toBe(joined)
-  })
-
+describe('CHANGE_TOPIC', () => {
   it('goes back to topic choice and keeps both languages', () => {
     const room = roomReducer(playing, { type: 'CHANGE_TOPIC' })
     expect(room).toEqual({ hostLearning: 'en', guestLearning: 'de', round: null })

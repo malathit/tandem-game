@@ -1,8 +1,8 @@
 import { render, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { staticSource } from '../content/staticSource'
-import { createGame, currentStep, joinGame, languages, open, sentenceOn, startJoining } from '../test/devices'
+import { createGame, currentStep, joinGame, languages, open, sentenceOn, startJoining, startRound } from '../test/devices'
+import { english, german } from '../test/generators'
 import { createMemoryNetwork } from '../test/memoryNetwork'
 import { OnlineGame } from './OnlineGame'
 
@@ -36,18 +36,17 @@ describe('playing a whole round on two devices', () => {
     expect(await host.ui.findByText(/waiting for your partner to join/i)).toBeInTheDocument()
 
     const guest = await joinGame(network, user, host.code)
-    await host.ui.findByRole('button', { name: 'Modal verbs' })
+    await host.ui.findByRole('button', { name: 'Greetings and small talk' })
     expect(await guest.ui.findByText(/waiting for the host to choose a topic/i)).toBeInTheDocument()
     expect(host.ui.getByText(/Player 2 is learning German/)).toBeInTheDocument()
     expect(guest.ui.getByText(/Player 2 is learning German \(you\)/)).toBeInTheDocument()
 
-    await user.click(host.ui.getByRole('button', { name: 'Modal verbs' }))
+    await startRound(host, user)
     await host.ui.findByText('Turn 1 of 4')
     await guest.ui.findByText('Turn 1 of 4')
 
     // Player 1 (host) reads a German sentence; the partner sees the same one.
-    const germanModals = staticSource.getSentences('de', 'modal-verbs').map((s) => s.text)
-    expect(germanModals).toContain(sentenceOn(host))
+    expect(german).toContain(sentenceOn(host))
     expect(sentenceOn(guest)).toBe(sentenceOn(host))
     expect(guest.ui.queryByRole('button', { name: /next turn/i })).not.toBeInTheDocument()
     expect(guest.ui.getByRole('status')).toHaveTextContent('Waiting for Player 1')
@@ -65,8 +64,7 @@ describe('playing a whole round on two devices', () => {
     }
 
     // Player 2 (guest) reads English and finishes the round.
-    const englishModals = staticSource.getSentences('en', 'modal-verbs').map((s) => s.text)
-    expect(englishModals).toContain(sentenceOn(guest))
+    expect(english).toContain(sentenceOn(guest))
     await user.click(guest.ui.getByRole('button', { name: 'Finish round' }))
     await host.ui.findByRole('heading', { name: 'Round complete' })
     await guest.ui.findByRole('heading', { name: 'Round complete' })
@@ -74,6 +72,7 @@ describe('playing a whole round on two devices', () => {
     expect(guest.ui.getByText(/waiting for the host to start another round/i)).toBeInTheDocument()
 
     await user.click(host.ui.getByRole('button', { name: 'Play again' }))
+    await user.click(await host.ui.findByRole('button', { name: 'Start round' }))
     await host.ui.findByText('Turn 1 of 4')
     await guest.ui.findByText('Turn 1 of 4')
   })
@@ -83,23 +82,22 @@ describe('playing a whole round on two devices', () => {
     const network = createMemoryNetwork()
     const host = await createGame(network, user)
     const guest = await joinGame(network, user, host.code)
-    await user.click(await host.ui.findByRole('button', { name: 'Conjunctions' }))
+    await startRound(host, user, 'Weather')
     await guest.ui.findByText('Turn 1 of 4')
 
     await user.click(host.ui.getByRole('button', { name: 'Change topic' }))
-    await host.ui.findByRole('button', { name: 'Modal verbs' })
+    await host.ui.findByRole('button', { name: 'Greetings and small talk' })
     await guest.ui.findByText(/waiting for the host to choose a topic/i)
   })
 
-  it('tells the host when a topic has no sentences and keeps the guest waiting', async () => {
+  it('says AI is not available, and keeps the guest waiting, in a build without it', async () => {
     const user = userEvent.setup()
     const network = createMemoryNetwork()
-    const host = await createGame(network, user)
+    const host = await createGame(network, user, null)
     const guest = await joinGame(network, user, host.code)
-    await host.ui.findByRole('button', { name: 'Modal verbs' })
 
-    await user.type(host.ui.getByLabelText('Or enter your own topic'), 'Weather{Enter}')
-    expect(await host.ui.findByText(/no sentences yet for .?Weather/i)).toBeInTheDocument()
+    expect(await host.ui.findByRole('alert')).toHaveTextContent(/AI sentences aren't available/i)
+    expect(host.ui.queryByRole('button', { name: 'Greetings and small talk' })).not.toBeInTheDocument()
     expect(guest.ui.getByText(/waiting for the host to choose a topic/i)).toBeInTheDocument()
   })
 })
@@ -121,7 +119,7 @@ describe('invite links', () => {
     const guest = within(view.container)
     await user.selectOptions(await guest.findByLabelText('I am learning'), 'de')
     await user.click(guest.getByRole('button', { name: 'Continue' }))
-    await host.ui.findByRole('button', { name: 'Modal verbs' })
+    await host.ui.findByRole('button', { name: 'Greetings and small talk' })
   })
 
   it('starts on the menu when there is no code', () => {
@@ -143,12 +141,12 @@ describe('progress steps', () => {
 
     await user.selectOptions(guest.ui.getByLabelText('I am learning'), 'de')
     await user.click(guest.ui.getByRole('button', { name: 'Continue' }))
-    await host.ui.findByRole('button', { name: 'Modal verbs' })
+    await host.ui.findByRole('button', { name: 'Greetings and small talk' })
     await guest.ui.findByText(/waiting for the host to choose a topic/i)
     expect(currentStep(host)).toBe('Topic')
     expect(currentStep(guest)).toBe('Topic')
 
-    await user.click(host.ui.getByRole('button', { name: 'Modal verbs' }))
+    await startRound(host, user)
     await guest.ui.findByText('Turn 1 of 4')
     expect(currentStep(host)).toBe('Play')
     expect(currentStep(guest)).toBe('Play')
@@ -182,11 +180,11 @@ describe('joining', () => {
     const network = createMemoryNetwork()
     const host = await createGame(network, user)
     await joinGame(network, user, host.code)
-    await host.ui.findByRole('button', { name: 'Modal verbs' })
+    await host.ui.findByRole('button', { name: 'Greetings and small talk' })
 
     const intruder = await startJoining(network, user, host.code)
     expect(await intruder.ui.findByRole('alert')).toHaveTextContent(/connection .* lost/i)
-    expect(host.ui.getByRole('button', { name: 'Modal verbs' })).toBeInTheDocument()
+    expect(host.ui.getByRole('button', { name: 'Greetings and small talk' })).toBeInTheDocument()
   })
 })
 
@@ -208,7 +206,7 @@ describe('connection problems', () => {
     const network = createMemoryNetwork()
     const host = await createGame(network, user)
     const guest = await joinGame(network, user, host.code)
-    await user.click(await host.ui.findByRole('button', { name: 'Modal verbs' }))
+    await startRound(host, user)
     await user.click(await host.ui.findByRole('button', { name: 'Next turn' }))
     await guest.ui.findByText('Turn 2 of 4')
 
@@ -226,7 +224,7 @@ describe('connection problems', () => {
     const network = createMemoryNetwork()
     const host = await createGame(network, user)
     const guest = await joinGame(network, user, host.code)
-    await host.ui.findByRole('button', { name: 'Modal verbs' })
+    await host.ui.findByRole('button', { name: 'Greetings and small talk' })
 
     await user.click(host.ui.getByRole('button', { name: 'Leave game' }))
     expect(host.ui.getByRole('button', { name: 'Create a game' })).toBeInTheDocument()

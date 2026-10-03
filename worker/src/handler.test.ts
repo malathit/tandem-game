@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { PRESET_TOPICS } from '../../src/content/topics'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createHandler, type AiBinding, type KvStore } from './handler'
 
@@ -56,7 +57,7 @@ const post = (body: unknown, headers: Record<string, string> = { Origin: ORIGIN 
     body: typeof body === 'string' ? body : JSON.stringify(body),
   })
 
-const preset = (extra: object = {}) => ({ language: 'de', topic: { kind: 'preset', id: 'modal-verbs' }, ...extra })
+const preset = (extra: object = {}) => ({ language: 'de', topic: { kind: 'preset', id: 'weather' }, ...extra })
 const custom = (text: string, language = 'de') => ({ language, topic: { kind: 'custom', text } })
 const ask = async (body: unknown, headers?: Record<string, string>) => {
   const response = await handler()(post(body, headers))
@@ -103,7 +104,7 @@ describe('requests it refuses', () => {
 
   it('refuses invalid JSON and invalid requests', async () => {
     expect((await ask('{not json')).status).toBe(400)
-    expect((await ask({ language: 'fr', topic: { kind: 'preset', id: 'modal-verbs' } })).status).toBe(400)
+    expect((await ask({ language: 'fr', topic: { kind: 'preset', id: 'weather' } })).status).toBe(400)
     expect((await ask(custom('x'.repeat(61)))).status).toBe(400)
     expect((await ask({ language: 'de', topic: { kind: 'preset', id: 'unknown' } })).status).toBe(400)
     expect(ai.calls).toHaveLength(0)
@@ -185,16 +186,27 @@ describe('generating sentences', () => {
       expect(user.match(/<\/?topic>/g)).toEqual(['<topic>', '</topic>'])
     })
 
-    it('uses the readable name of a preset topic', async () => {
+    it('gives a preset topic its hint, so the AI knows what to write about', async () => {
       ai.replies = [good]
       await ask(preset())
-      expect(ai.calls[0].input.messages[1].content).toContain('<topic>modal verbs</topic>')
+      const hint = PRESET_TOPICS.find((topic) => topic.id === 'weather')?.hint
+      expect(hint).toBeTruthy()
+      expect(ai.calls[0].input.messages[1].content).toContain(`<topic>${hint}</topic>`)
+    })
+
+    it('has a hint for every preset topic the Worker accepts', async () => {
+      for (const { id, hint } of PRESET_TOPICS) {
+        kv = new FakeKv() // the test's daily cap is only 5 calls
+        ai.replies = [good]
+        await ask(preset({ topic: { kind: 'preset', id }, fresh: true }))
+        expect(ai.calls.at(-1)?.input.messages[1].content).toContain(`<topic>${hint}</topic>`)
+      }
     })
   })
 })
 
 describe('stored sentences for preset topics', () => {
-  const key = 'pool:v1:de:modal-verbs'
+  const key = 'pool:v2:de:weather'
 
   it('stores a freshly generated batch for 30 days', async () => {
     ai.replies = [good]
@@ -250,7 +262,7 @@ describe('stored sentences for preset topics', () => {
     ai.replies = [{ sentences: ['She can swim very well.', 'They should try harder today.'] }]
     const { body } = await ask(preset({ language: 'en' }))
     expect((body.sentences as string[])[0]).toMatch(/swim/)
-    expect(kv.keys('pool:')).toEqual([key, 'pool:v1:en:modal-verbs'])
+    expect(kv.keys('pool:')).toEqual([key, 'pool:v2:en:weather'])
   })
 
   it('still answers when storing the batch fails', async () => {
@@ -313,7 +325,7 @@ describe('the daily cap on AI calls', () => {
 
   it('falls back to a stored batch for a preset when the cap is reached', async () => {
     kv.data.set(capKey, '5')
-    kv.data.set('pool:v1:de:modal-verbs', JSON.stringify([other.sentences]))
+    kv.data.set('pool:v2:de:weather', JSON.stringify([other.sentences]))
     expect((await ask(preset({ fresh: true }))).body).toEqual(other)
     expect((await ask(preset({ language: 'en' }))).status).toBe(429)
   })

@@ -1,6 +1,5 @@
 import { staticSource } from '../content/staticSource'
 import type { Language, LanguageCode } from '../content/types'
-import { buildTurns, sentencesFor } from '../game/buildTurns'
 import type { SentenceGenerator } from '../generation/generator'
 import { topicName } from '../game/topicName'
 import { useRoundSetup } from '../game/useRoundSetup'
@@ -18,7 +17,7 @@ interface HostRoomProps {
   network: Network
   languages: Language[]
   hostLearning: LanguageCode
-  /** Where AI sentences come from; without it the host can only play the hand-written topics. */
+  /** Where the AI's sentences come from; without it there is nothing to play. */
   generator?: SentenceGenerator
   onLeave: () => void
 }
@@ -70,7 +69,7 @@ export function HostRoom({ network, languages, hostLearning, generator, onLeave 
             <PlayerChips pair={pair} languages={languages} me={1} />
             <RoundPreview
               setup={state}
-              topicLabel={topicName(staticSource, pair, topic)}
+              topicLabel={topicName(staticSource, topic)}
               languages={languages}
               onStart={() => {
                 dispatch({ type: 'START_ROUND', topic, turns: state.turns })
@@ -86,26 +85,13 @@ export function HostRoom({ network, languages, hostLearning, generator, onLeave 
       return (
         <>
           <PlayerChips pair={pair} languages={languages} me={1} />
-          {state.notice !== null && (
-            <p className="notice" role="status">
-              No sentences yet for “{state.notice}”. Choose another topic.
+          {generator === undefined ? (
+            <p className="card" role="alert">
+              AI sentences aren't available in this version of the game, so there is nothing to play yet.
             </p>
+          ) : (
+            <TopicPicker topics={staticSource.getTopics()} onSelect={setup.choose} />
           )}
-          <TopicPicker
-            topics={staticSource.getTopics(pair)}
-            onSelect={(topic) => {
-              if (generator === undefined) {
-                // Nothing to review: hand-written topics start at once.
-                const turns = buildTurns(pair, sentencesFor(staticSource, pair, topic))
-                if (turns.length > 0) {
-                  dispatch({ type: 'START_ROUND', topic, turns })
-                  setup.back()
-                  return
-                }
-              }
-              setup.choose(topic)
-            }}
-          />
         </>
       )
     }
@@ -115,20 +101,16 @@ export function HostRoom({ network, languages, hostLearning, generator, onLeave 
     return (
       <>
         <PlayerChips pair={pair} languages={languages} me={1} />
-        <p className="topic">Topic: {topicName(staticSource, pair, round.topic)}</p>
+        <p className="topic">Topic: {topicName(staticSource, round.topic)}</p>
         <TurnView
           game={game}
           languages={languages}
           canAct={myTurn}
           onNext={() => dispatch({ type: 'NEXT_TURN', from: 1 })}
           onPlayAgain={() => {
-            if (generator === undefined) {
-              dispatch({ type: 'PLAY_AGAIN', turns: buildTurns(pair, sentencesFor(staticSource, pair, round.topic)) })
-            } else {
-              // Review again, so a topic the AI wrote gets new sentences rather than the same ones.
-              dispatch({ type: 'CHANGE_TOPIC' })
-              setup.choose(round.topic)
-            }
+            // Review again, so the topic gets new sentences rather than the same ones.
+            dispatch({ type: 'CHANGE_TOPIC' })
+            setup.choose(round.topic)
           }}
         />
       </>

@@ -1,109 +1,41 @@
 import { describe, expect, it } from 'vitest'
-import { createStaticSource, staticSource } from './staticSource'
+import { staticSource } from './staticSource'
+import { PRESET_TOPICS } from './topics'
 
-const sentences = (prefix: string, count = 2) =>
-  Array.from({ length: count }, (_, i) => ({
-    id: `${prefix}-${i + 1}`,
-    text: `${prefix} sentence ${i + 1}`,
-  }))
-
-const files = {
-  './data/en/modal-verbs.json': sentences('en-mv'),
-  './data/de/modal-verbs.json': sentences('de-mv'),
-  './data/en/conjunctions.json': sentences('en-conj'),
-}
-
-describe('createStaticSource', () => {
-  const source = createStaticSource(files)
-
+describe('staticSource', () => {
   it('lists the supported languages', () => {
-    expect(source.getLanguages().map((l) => l.code)).toEqual(['en', 'de'])
+    expect(staticSource.getLanguages().map((l) => l.code)).toEqual(['en', 'de'])
   })
 
-  it('returns sentences for a language and topic', () => {
-    expect(source.getSentences('de', 'modal-verbs')).toEqual(sentences('de-mv'))
+  it('offers the ten preset topics, without the AI hints', () => {
+    const topics = staticSource.getTopics()
+    expect(topics).toHaveLength(10)
+    expect(topics[0]).toEqual({ id: 'greetings', name: 'Greetings and small talk' })
   })
 
-  it('returns no sentences for a topic without content in that language', () => {
-    expect(source.getSentences('de', 'conjunctions')).toEqual([])
-  })
-
-  it('returns no sentences for an unknown topic such as free text', () => {
-    expect(source.getSentences('en', 'something I typed')).toEqual([])
-  })
-
-  it('only offers topics that have sentences in both languages', () => {
-    expect(source.getTopics(['en', 'de']).map((t) => t.id)).toEqual(['modal-verbs'])
-  })
-
-  it('offers the same topics regardless of language order', () => {
-    expect(source.getTopics(['de', 'en'])).toEqual(source.getTopics(['en', 'de']))
-  })
-
-  it('treats a topic with an empty sentence list as having no content', () => {
-    const empty = createStaticSource({ ...files, './data/de/conjunctions.json': [] })
-    expect(empty.getTopics(['en', 'de']).map((t) => t.id)).toEqual(['modal-verbs'])
-  })
-
-  it('does not let callers mutate the stored sentences', () => {
-    source.getSentences('en', 'modal-verbs').pop()
-    expect(source.getSentences('en', 'modal-verbs')).toHaveLength(2)
+  it('does not let callers change the topics or languages', () => {
+    staticSource.getTopics().pop()
+    staticSource.getLanguages().pop()
+    expect(staticSource.getTopics()).toHaveLength(10)
+    expect(staticSource.getLanguages()).toHaveLength(2)
   })
 })
 
-describe('createStaticSource validation', () => {
-  it('rejects a file that is not a list', () => {
-    expect(() => createStaticSource({ './data/en/modal-verbs.json': {} })).toThrow(
-      /data\/en\/modal-verbs\.json/,
-    )
+describe('preset topics', () => {
+  it('have unique ids made of lowercase letters and dashes', () => {
+    const ids = PRESET_TOPICS.map((topic) => topic.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    for (const id of ids) expect(id).toMatch(/^[a-z]+(-[a-z]+)*$/)
   })
 
-  it('rejects a sentence without text', () => {
-    expect(() =>
-      createStaticSource({ './data/en/modal-verbs.json': [{ id: 'a', text: '  ' }] }),
-    ).toThrow(/data\/en\/modal-verbs\.json/)
+  it('have a name and a hint for the AI', () => {
+    for (const topic of PRESET_TOPICS) {
+      expect(topic.name.trim()).not.toBe('')
+      expect(topic.hint.trim()).not.toBe('')
+    }
   })
 
-  it('rejects duplicate sentence ids within a file', () => {
-    expect(() =>
-      createStaticSource({
-        './data/en/modal-verbs.json': [
-          { id: 'a', text: 'one' },
-          { id: 'a', text: 'two' },
-        ],
-      }),
-    ).toThrow(/duplicate/i)
+  it('keep the hints short enough to stay a theme, not a prompt', () => {
+    for (const topic of PRESET_TOPICS) expect(topic.hint.length).toBeLessThanOrEqual(160)
   })
-
-  it('rejects a file for an unknown language', () => {
-    expect(() => createStaticSource({ './data/xx/modal-verbs.json': sentences('x') })).toThrow(
-      /unknown language/i,
-    )
-  })
-
-  it('rejects a file for an unknown topic', () => {
-    expect(() => createStaticSource({ './data/en/poetry.json': sentences('x') })).toThrow(
-      /unknown topic/i,
-    )
-  })
-})
-
-describe('bundled seed content', () => {
-  const pair = ['en', 'de'] as const
-
-  it('offers modal verbs and conjunctions for English and German', () => {
-    expect(staticSource.getTopics(pair).map((t) => t.id)).toEqual([
-      'modal-verbs',
-      'conjunctions',
-    ])
-  })
-
-  it.each(['modal-verbs', 'conjunctions'])(
-    'has enough sentences in both languages for %s',
-    (topicId) => {
-      for (const language of pair) {
-        expect(staticSource.getSentences(language, topicId).length).toBeGreaterThanOrEqual(2)
-      }
-    },
-  )
 })

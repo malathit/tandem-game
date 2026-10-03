@@ -34,12 +34,22 @@ function manualGenerator() {
   return { generator, pending, answerAll, failAll }
 }
 
-const preset = 'modal-verbs'
+const preset = 'greetings'
+
+/** A hook whose host has chosen the preset and been shown the AI's first sentences. */
+async function previewing() {
+  const manual = manualGenerator()
+  const { result } = renderHook(() => useRoundSetup(pair, manual.generator))
+  act(() => result.current.choose(preset))
+  act(() => manual.answerAll())
+  await waitFor(() => expect(result.current.state).toMatchObject({ phase: 'preview', busy: false }))
+  return { ...manual, result }
+}
 
 describe('useRoundSetup', () => {
   it('starts by letting the host choose', () => {
     const { result } = renderHook(() => useRoundSetup(pair, manualGenerator().generator))
-    expect(result.current.state).toEqual({ phase: 'choosing', notice: null })
+    expect(result.current.state).toEqual({ phase: 'choosing' })
   })
 
   it('does nothing until the partner has joined', () => {
@@ -47,29 +57,48 @@ describe('useRoundSetup', () => {
     const { result } = renderHook(() => useRoundSetup(null, generator))
     act(() => result.current.choose(preset))
     act(() => result.current.choose('my pet dragon'))
-    expect(result.current.state).toEqual({ phase: 'choosing', notice: null })
+    expect(result.current.state).toEqual({ phase: 'choosing' })
     expect(pending).toHaveLength(0)
   })
 
   describe('choosing a preset topic', () => {
-    it('previews the hand-written sentences straight away, without asking the AI', () => {
-      const { generator, pending } = manualGenerator()
+    it('asks the AI for both languages straight away and previews the result', async () => {
+      const { generator, pending, answerAll } = manualGenerator()
       const { result } = renderHook(() => useRoundSetup(pair, generator))
       act(() => result.current.choose(preset))
 
+      expect(result.current.state).toMatchObject({ phase: 'preview', topic: { kind: 'preset', id: preset }, busy: true, turns: [] })
+      expect(pending.map((p) => [p.request.language, p.request.topic, p.request.fresh]).sort()).toEqual([
+        ['de', { kind: 'preset', id: preset }, false],
+        ['en', { kind: 'preset', id: preset }, false],
+      ])
+
+      act(() => answerAll())
+      await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, error: null }))
       const { state } = result.current
-      expect(state).toMatchObject({ phase: 'preview', topic: { kind: 'preset', id: preset }, fromAi: false, busy: false, error: null })
       if (state.phase !== 'preview') throw new Error('expected a preview')
       expect(state.turns.map((turn) => turn.player)).toEqual([1, 2, 1, 2])
-      expect(pending).toHaveLength(0)
+    })
+
+    it('treats text that is not a preset id as a custom topic', () => {
+      const { generator, pending } = manualGenerator()
+      const { result } = renderHook(() => useRoundSetup(pair, generator))
+      act(() => result.current.choose('greetings and more'))
+      expect(result.current.state).toMatchObject({ topic: { kind: 'custom', text: 'greetings and more' } })
+      expect(pending.every((p) => p.request.topic.kind === 'custom')).toBe(true)
+    })
+
+    it('does nothing without a generator', () => {
+      const { result } = renderHook(() => useRoundSetup(pair, undefined))
+      act(() => result.current.choose(preset))
+      act(() => result.current.choose('my pet dragon'))
+      expect(result.current.state).toEqual({ phase: 'choosing' })
     })
   })
 
   describe('regenerating with the AI', () => {
     it('keeps showing the current sentences while it works, then swaps in the new ones', async () => {
-      const { generator, pending, answerAll } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
-      act(() => result.current.choose(preset))
+      const { pending, answerAll, result } = await previewing()
       const before = result.current.state.phase === 'preview' ? result.current.state.turns : []
 
       act(() => result.current.regenerate())
@@ -82,7 +111,7 @@ describe('useRoundSetup', () => {
       )
 
       act(() => answerAll())
-      await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, fromAi: true }))
+      await waitFor(() => expect(result.current.state).toMatchObject({ busy: false }))
       const { state } = result.current
       if (state.phase !== 'preview') throw new Error('expected a preview')
       // Player 1 learns English, so reads German; Player 2 reads English.
@@ -90,29 +119,24 @@ describe('useRoundSetup', () => {
     })
 
     it('keeps the previous sentences and reports why when it fails', async () => {
-      const { generator, failAll } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
-      act(() => result.current.choose(preset))
+      const { failAll, result } = await previewing()
       const before = result.current.state.phase === 'preview' ? result.current.state.turns : []
 
       act(() => result.current.regenerate())
       act(() => failAll('limit-reached'))
       await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, error: 'limit-reached' }))
-      expect(result.current.state).toMatchObject({ turns: before, fromAi: false })
+      expect(result.current.state).toMatchObject({ turns: before })
     })
 
     it('treats an unexpected failure as the service being unavailable', async () => {
       const generator: SentenceGenerator = { generate: () => Promise.reject(new Error('boom')) }
       const { result } = renderHook(() => useRoundSetup(pair, generator))
       act(() => result.current.choose(preset))
-      act(() => result.current.regenerate())
       await waitFor(() => expect(result.current.state).toMatchObject({ error: 'unavailable' }))
     })
 
     it('clears an earlier error when it tries again', async () => {
-      const { generator, failAll, answerAll } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
-      act(() => result.current.choose(preset))
+      const { failAll, answerAll, result } = await previewing()
       act(() => result.current.regenerate())
       act(() => failAll('unavailable'))
       await waitFor(() => expect(result.current.state).toMatchObject({ error: 'unavailable' }))
@@ -120,31 +144,20 @@ describe('useRoundSetup', () => {
       act(() => result.current.regenerate())
       expect(result.current.state).toMatchObject({ busy: true, error: null })
       act(() => answerAll())
-      await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, error: null, fromAi: true }))
+      await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, error: null }))
     })
 
-    it('ignores a second request while one is running', () => {
-      const { generator, pending } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
-      act(() => result.current.choose(preset))
+    it('ignores a second request while one is running', async () => {
+      const { pending, result } = await previewing()
       act(() => result.current.regenerate())
       act(() => result.current.regenerate())
       expect(pending).toHaveLength(2) // one per language, not four
-    })
-
-    it('does nothing without a generator', () => {
-      const { result } = renderHook(() => useRoundSetup(pair, undefined))
-      act(() => result.current.choose(preset))
-      act(() => result.current.regenerate())
-      expect(result.current.state).toMatchObject({ phase: 'preview', busy: false })
     })
   })
 
   describe('cancelling', () => {
     it('stops the request and keeps the current sentences, without an error', async () => {
-      const { generator, pending } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
-      act(() => result.current.choose(preset))
+      const { pending, result } = await previewing()
       const before = result.current.state.phase === 'preview' ? result.current.state.turns : []
       act(() => result.current.regenerate())
       const signals = pending.map((p) => p.signal)
@@ -155,9 +168,7 @@ describe('useRoundSetup', () => {
     })
 
     it('ignores an answer that arrives after cancelling', async () => {
-      const { generator, answerAll } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
-      act(() => result.current.choose(preset))
+      const { answerAll, result } = await previewing()
       const before = result.current.state
       act(() => result.current.regenerate())
       act(() => result.current.cancel())
@@ -166,9 +177,7 @@ describe('useRoundSetup', () => {
     })
 
     it('ignores a failure that arrives after cancelling', async () => {
-      const { generator, failAll } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
-      act(() => result.current.choose(preset))
+      const { failAll, result } = await previewing()
       const before = result.current.state
       act(() => result.current.regenerate())
       act(() => result.current.cancel())
@@ -181,7 +190,7 @@ describe('useRoundSetup', () => {
       const { result } = renderHook(() => useRoundSetup(pair, generator))
       act(() => result.current.choose('my pet dragon'))
       act(() => result.current.cancel())
-      expect(result.current.state).toEqual({ phase: 'choosing', notice: null })
+      expect(result.current.state).toEqual({ phase: 'choosing' })
     })
   })
 
@@ -196,7 +205,7 @@ describe('useRoundSetup', () => {
       expect(pending.map((p) => p.request.fresh)).toEqual([false, false])
 
       act(() => answerAll())
-      await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, fromAi: true }))
+      await waitFor(() => expect(result.current.state).toMatchObject({ busy: false }))
     })
 
     it('reports a failure with nothing to show, so the host can try again or choose another topic', async () => {
@@ -205,12 +214,6 @@ describe('useRoundSetup', () => {
       act(() => result.current.choose('my pet dragon'))
       act(() => failAll('invalid'))
       await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, error: 'invalid', turns: [] }))
-    })
-
-    it('says so, without calling anything, when there is no generator', () => {
-      const { result } = renderHook(() => useRoundSetup(pair, undefined))
-      act(() => result.current.choose('my pet dragon'))
-      expect(result.current.state).toEqual({ phase: 'choosing', notice: 'my pet dragon' })
     })
   })
 
@@ -222,7 +225,7 @@ describe('useRoundSetup', () => {
       act(() => result.current.regenerate())
       act(() => result.current.back())
       expect(pending.every((p) => p.signal?.aborted)).toBe(true)
-      expect(result.current.state).toEqual({ phase: 'choosing', notice: null })
+      expect(result.current.state).toEqual({ phase: 'choosing' })
     })
 
     it('stops the request when the screen goes away', () => {

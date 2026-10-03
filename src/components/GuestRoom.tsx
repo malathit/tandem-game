@@ -91,7 +91,7 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
     return (
       <>
         <PlayerChips pair={pair} languages={languages} me={2} />
-        <p className="topic">Topic: {topicName(staticSource, pair, round.topic)}</p>
+        <p className="topic">Topic: {topicName(staticSource, round.topic)}</p>
         <TurnView game={game} languages={languages} canAct={myTurn} onNext={nextTurn} />
       </>
     )

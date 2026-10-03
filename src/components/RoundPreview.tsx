@@ -24,7 +24,7 @@ const PROBLEMS: Record<GenerationErrorKind, string> = {
 
 /** The host reviews the sentences of the round, and may ask the AI for new ones, before starting. */
 export function RoundPreview({ setup, topicLabel, languages, onStart, onRegenerate, onCancel, onBack }: RoundPreviewProps) {
-  const { turns, busy, error, fromAi } = setup
+  const { turns, busy, error } = setup
   const hasSentences = turns.length > 0
   const nameOf = (code: string) => languages.find((language) => language.code === code)?.name ?? code
 
@@ -52,7 +52,7 @@ export function RoundPreview({ setup, topicLabel, languages, onStart, onRegenera
             ))}
           </ol>
           <p className="preview-source">
-            {fromAi ? 'Written by AI, so they can contain mistakes. Regenerate if something looks off.' : 'Hand-written sentences.'}
+            Written by AI, so they can contain mistakes. Regenerate if something looks off.
           </p>
         </>
       )}

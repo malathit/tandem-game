@@ -1,10 +1,11 @@
+import { PRESET_TOPICS } from '../content/topics'
 import { isLanguageCode } from '../content/types'
 import type { GenerateRequest, GenerateTopic } from './types'
 
 export const MAX_TOPIC_LENGTH = 60
 
-/** Preset topics the Worker may keep stored sentences for. A test keeps this in step with the content. */
-export const PRESET_TOPIC_IDS: readonly string[] = ['modal-verbs', 'conjunctions']
+/** Preset topics the Worker may keep stored sentences for. */
+export const PRESET_TOPIC_IDS: readonly string[] = PRESET_TOPICS.map((topic) => topic.id)
 
 /** Cleans a typed topic; null if it is empty, too long or not text. */
 export function normalizeTopic(value: unknown): string | null {
