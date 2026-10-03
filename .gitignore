@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Wrangler (Cloudflare Worker) local state
+.wrangler

@@ -1,0 +1,15 @@
+name = "tandem-generate"
+main = "src/index.ts"
+compatibility_date = "2026-05-03"
+
+# Workers AI: no API key, the binding is the credential.
+[ai]
+binding = "AI"
+
+# Stored sentences for preset topics and the daily AI-call counter.
+# `id` is added when the namespace is created (see worker/README.md).
+[[kv_namespaces]]
+binding = "POOL"
+
+[vars]
+ALLOWED_ORIGINS = "https://www.malathi.dev,http://localhost:5173,http://localhost:4173"
