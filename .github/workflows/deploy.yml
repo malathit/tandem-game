@@ -27,6 +27,9 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+        env:
+          # The Worker's public address (a repository variable, not a secret). Without it the AI features stay hidden.
+          VITE_GENERATE_URL: ${{ vars.VITE_GENERATE_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
