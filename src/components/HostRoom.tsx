@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { staticSource } from '../content/staticSource'
 import type { Language, LanguageCode } from '../content/types'
-import { buildTurns } from '../game/buildTurns'
+import { buildTurns, sentencesFor } from '../game/buildTurns'
 import { topicName } from '../game/topicName'
 import type { Network } from '../online/network'
 import { useHostSession } from '../online/useHostSession'
@@ -70,7 +70,7 @@ export function HostRoom({ network, languages, hostLearning, onLeave }: HostRoom
             topics={staticSource.getTopics(pair)}
             onSelect={(topic) => {
               // The shuffle happens here, in an event handler, so it runs once per round.
-              const turns = buildTurns(pair, topic, staticSource)
+              const turns = buildTurns(pair, sentencesFor(staticSource, pair, topic))
               setEmptyTopic(turns.length === 0 ? topic : null)
               dispatch({ type: 'START_ROUND', topic, turns })
             }}
@@ -91,7 +91,8 @@ export function HostRoom({ network, languages, hostLearning, onLeave }: HostRoom
           canAct={myTurn}
           onNext={() => dispatch({ type: 'NEXT_TURN', from: 1 })}
           onPlayAgain={() =>
-            dispatch({ type: 'PLAY_AGAIN', turns: buildTurns(pair, round.topic, staticSource) })
+            dispatch({ type: 'PLAY_AGAIN', turns: buildTurns(pair, sentencesFor(staticSource, pair, round.topic)),
+            })
           }
         />
       </>

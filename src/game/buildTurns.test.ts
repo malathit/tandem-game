@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ContentSource, Sentence } from '../content/types'
-import { buildTurns } from './buildTurns'
+import { buildTurns, sentencesFor } from './buildTurns'
 
 const make = (prefix: string, count: number): Sentence[] =>
   Array.from({ length: count }, (_, i) => ({ id: `${prefix}${i + 1}`, text: `${prefix} ${i + 1}` }))
@@ -13,10 +13,10 @@ function sourceOf(data: Record<string, Sentence[]>): ContentSource {
   }
 }
 
-const source = sourceOf({
-  'en/t': Object.freeze(make('en', 4)) as Sentence[],
-  'de/t': Object.freeze(make('de', 4)) as Sentence[],
-})
+const sentences = {
+  en: Object.freeze(make('en', 4)) as Sentence[],
+  de: Object.freeze(make('de', 4)) as Sentence[],
+}
 
 const keepOrder = <T>(items: readonly T[]) => [...items]
 const reverse = <T>(items: readonly T[]) => [...items].reverse()
@@ -26,40 +26,53 @@ const pair = ['en', 'de'] as const
 
 describe('buildTurns', () => {
   it('alternates between the players, two sentences each', () => {
-    const turns = buildTurns(pair, 't', source, keepOrder)
+    const turns = buildTurns(pair, sentences, keepOrder)
     expect(turns.map((t) => t.player)).toEqual([1, 2, 1, 2])
   })
 
   it('shows each player sentences in their native language and tells them what to translate into', () => {
-    const [first, second] = buildTurns(pair, 't', source, keepOrder)
+    const [first, second] = buildTurns(pair, sentences, keepOrder)
     // Player 1 learns English, so they read German and translate into English.
     expect(first).toEqual({ player: 1, sentence: { id: 'de1', text: 'de 1' }, learning: 'en' })
     expect(second).toEqual({ player: 2, sentence: { id: 'en1', text: 'en 1' }, learning: 'de' })
   })
 
   it('uses the shuffle it is given to choose and order the sentences', () => {
-    const turns = buildTurns(pair, 't', source, reverse)
+    const turns = buildTurns(pair, sentences, reverse)
     expect(turns.map((t) => t.sentence.id)).toEqual(['de4', 'en4', 'de3', 'en3'])
   })
 
   it('never repeats a sentence within a round', () => {
     for (let run = 0; run < 50; run++) {
-      const ids = buildTurns(pair, 't', source).map((t) => t.sentence.id)
+      const ids = buildTurns(pair, sentences).map((t) => t.sentence.id)
       expect(new Set(ids).size).toBe(ids.length)
     }
   })
 
   it('shortens the round to the language with fewer sentences', () => {
-    const short = sourceOf({ 'en/t': make('en', 4), 'de/t': make('de', 1) })
-    expect(buildTurns(pair, 't', short, keepOrder).map((t) => t.player)).toEqual([1, 2])
+    const short = { en: make('en', 4), de: make('de', 1) }
+    expect(buildTurns(pair, short, keepOrder).map((t) => t.player)).toEqual([1, 2])
   })
 
-  it('returns no turns when a language has no sentences for the topic', () => {
-    const lopsided = sourceOf({ 'en/t': make('en', 4) })
-    expect(buildTurns(pair, 't', lopsided)).toEqual([])
+  it('returns no turns when a language has no sentences', () => {
+    expect(buildTurns(pair, { en: make('en', 4) })).toEqual([])
+    expect(buildTurns(pair, { en: make('en', 4), de: [] })).toEqual([])
   })
 
-  it('returns no turns for an unknown topic', () => {
-    expect(buildTurns(pair, 'something typed', source)).toEqual([])
+  it('does not change the lists it is given', () => {
+    buildTurns(pair, sentences)
+    expect(sentences.en.map((s) => s.id)).toEqual(['en1', 'en2', 'en3', 'en4'])
+  })
+})
+
+describe('sentencesFor', () => {
+  const source = sourceOf({ 'en/t': make('en', 2), 'de/t': make('de', 3) })
+
+  it('reads the sentences of both languages in the pair for a topic', () => {
+    expect(sentencesFor(source, pair, 't')).toEqual({ en: make('en', 2), de: make('de', 3) })
+  })
+
+  it('gives empty lists for an unknown topic', () => {
+    expect(sentencesFor(source, pair, 'something typed')).toEqual({ en: [], de: [] })
   })
 })

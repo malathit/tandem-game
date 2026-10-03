@@ -10,6 +10,9 @@ export interface Turn {
 
 export const SENTENCES_PER_PLAYER = 2
 
+/** Sentences available for a round, by the language they are written in. */
+export type SentencesByLanguage = Partial<Record<LanguageCode, readonly Sentence[]>>
+
 export type Shuffle = <T>(items: readonly T[]) => T[]
 
 /** Fisher-Yates shuffle that returns a new array. */
@@ -22,6 +25,15 @@ export const shuffled: Shuffle = (items) => {
   return result
 }
 
+/** The sentences of both languages in `pair` for one topic of a content source. */
+export function sentencesFor(
+  source: ContentSource,
+  pair: LanguagePair,
+  topicId: string,
+): SentencesByLanguage {
+  return Object.fromEntries(pair.map((language) => [language, source.getSentences(language, topicId)]))
+}
+
 /**
  * Builds the turns of one round, alternating Player 1 and Player 2.
  * `pair` is [language Player 1 is learning, language Player 2 is learning], so
@@ -30,13 +42,12 @@ export const shuffled: Shuffle = (items) => {
  */
 export function buildTurns(
   pair: LanguagePair,
-  topicId: string,
-  source: ContentSource,
+  sentences: SentencesByLanguage,
   shuffle: Shuffle = shuffled,
 ): Turn[] {
   const [learnedByPlayer1, learnedByPlayer2] = pair
-  const forPlayer1 = shuffle(source.getSentences(learnedByPlayer2, topicId))
-  const forPlayer2 = shuffle(source.getSentences(learnedByPlayer1, topicId))
+  const forPlayer1 = shuffle(sentences[learnedByPlayer2] ?? [])
+  const forPlayer2 = shuffle(sentences[learnedByPlayer1] ?? [])
   const perPlayer = Math.min(SENTENCES_PER_PLAYER, forPlayer1.length, forPlayer2.length)
 
   return Array.from({ length: perPlayer }).flatMap((_, i): Turn[] => [
