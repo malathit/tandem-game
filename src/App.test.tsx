@@ -9,16 +9,21 @@ const texts = (language: 'en' | 'de', topic: string) =>
 
 const hasText = (allowed: string[]) => (content: string) => allowed.includes(content)
 
+// Plays on one device; starts from the start screen unless a game is already open.
 async function chooseLanguages(user: ReturnType<typeof userEvent.setup>) {
+  const local = screen.queryByRole('button', { name: 'Play on this device' })
+  if (local) await user.click(local)
   await user.selectOptions(screen.getByLabelText('Player 1 is learning'), 'en')
   await user.selectOptions(screen.getByLabelText('Player 2 is learning'), 'de')
   await user.click(screen.getByRole('button', { name: 'Continue' }))
 }
 
 describe('App', () => {
-  it('starts on the language setup screen', () => {
+  it('starts on the language setup screen once one-device play is chosen', async () => {
+    const user = userEvent.setup()
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Tandem Game' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Play on this device' }))
     expect(screen.getByLabelText('Player 1 is learning')).toBeInTheDocument()
   })
 
