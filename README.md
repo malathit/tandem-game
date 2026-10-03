@@ -2,7 +2,7 @@
 
 A language-learning game built with React, TypeScript and Vite. Pick two languages, choose a grammar topic (modal verbs, conjunctions, ...) and practise with fill-the-gap questions.
 
-Live site: https://malathit.github.io/tandem-game/
+Live site: https://www.malathi.dev/tandem-game/
 
 ## Development
 
