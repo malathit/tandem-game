@@ -41,26 +41,27 @@ test('a preset topic is written by the AI, can be regenerated, and is played on 
   await playRound(game, second)
 })
 
-test('the host can choose fewer sentences with translations, shown to both after each turn', async ({ browser }) => {
+test('with translations on, both players see each translation after the speaker shows it, or the speaker skips it', async ({ browser }) => {
   const game = await startGame(browser)
   const { host } = game
 
-  await host.getByLabel('Sentences per player').selectOption('1')
   await host.getByLabel('Show the translation after each turn').check()
   const answered = workerAnswered(host)
   await host.getByRole('button', { name: TOPIC }).click()
   await answered
   await expect(host.getByText(/Written by AI/)).toBeVisible({ timeout: 30_000 })
 
-  const turns = await reviewedTurns(game, 1)
+  const turns = await reviewedTurns(game)
   expectUsableSentences(turns)
 
   await confirmSentences(game)
-  const translations = await playRound(game, turns, { translated: true })
+  // Skip the third turn (Player 1's second); the other three show their translation first.
+  const translations = await playRound(game, turns, { translated: true, skip: [2] })
+  expect(translations).toHaveLength(3)
   // Player 1 reads German and translates into English; Player 2 the other way round.
-  for (const [player, language] of [[1, 'en'], [2, 'de']] as const) {
-    const translation = translations.find((turn) => turn.player === player)?.text ?? ''
-    expect(parseModelOutput({ sentences: [translation] }, language, 1), `Player ${player} translation: ${translation}`).toMatchObject({ ok: true })
+  for (const { player, text } of translations) {
+    const language = player === 1 ? 'en' : 'de'
+    expect(parseModelOutput({ sentences: [text] }, language, 1), `Player ${player} translation: ${text}`).toMatchObject({ ok: true })
   }
 })
 

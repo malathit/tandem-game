@@ -70,14 +70,22 @@ export async function confirmSentences({ host, guest }: Game) {
 
 /**
  * Plays a round to its end, checking that both devices show the same sentence on every turn.
- * With `translated`, each speaker shows the translation first, which is returned per player.
+ * With `translated`, each speaker shows the translation first, which is returned per player,
+ * except on the turns (by index) listed in `skip`, where they go on without showing it.
  */
-export async function playRound({ host, guest }: Game, turns: Turn[], { translated = false } = {}) {
+export async function playRound({ host, guest }: Game, turns: Turn[], { translated = false, skip = [] as number[] } = {}) {
   const translations: Turn[] = []
   for (const [index, turn] of turns.entries()) {
     await expect(host.locator('.sentence')).toHaveText(turn.text)
     await expect(guest.locator('.sentence')).toHaveText(turn.text)
     const mover = turn.player === 1 ? host : guest
+    if (translated && skip.includes(index)) {
+      await expect(host.locator('.translation')).toHaveCount(0)
+      await expect(guest.locator('.translation')).toHaveCount(0)
+      // Without showing the translation, the speaker goes straight on.
+      await mover.getByRole('button', { name: index === turns.length - 1 ? 'Finish round' : 'Next turn' }).click()
+      continue
+    }
     if (translated) {
       // Hidden from both until the speaker shows it.
       await expect(host.locator('.translation')).toHaveCount(0)

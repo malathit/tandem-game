@@ -67,7 +67,8 @@ describe('round options', () => {
       // Player 1 (host) reads German and translates into English; the translation is English.
       expect(host.ui.queryByText('Translation')).not.toBeInTheDocument()
       expect(guest.ui.queryByText('Translation')).not.toBeInTheDocument()
-      expect(host.ui.queryByRole('button', { name: 'Next turn' })).not.toBeInTheDocument()
+      // The speaker can show it or move on; the other player can do neither.
+      expect(host.ui.getByRole('button', { name: 'Show translation' })).toBeInTheDocument()
       expect(guest.ui.queryByRole('button', { name: /Show translation|Next turn/ })).not.toBeInTheDocument()
 
       await user.click(host.ui.getByRole('button', { name: 'Show translation' }))
@@ -85,11 +86,41 @@ describe('round options', () => {
       expect(sentenceOn(guest)).toBe(sentenceOn(host))
     })
 
+    it('lets a speaker skip the translation and go straight to the next turn, on both devices', async () => {
+      const { user, host, guest } = await startTranslated()
+      await confirmSentences(host, guest, user)
+      await host.ui.findByText('Turn 1 of 4')
+
+      await user.click(host.ui.getByRole('button', { name: 'Next turn' }))
+      await guest.ui.findByText('Turn 2 of 4')
+      await host.ui.findByText('Turn 2 of 4')
+      expect(host.ui.queryByText('Translation')).not.toBeInTheDocument()
+      expect(guest.ui.queryByText('Translation')).not.toBeInTheDocument()
+
+      // The next turn is the guest's, who may skip too; the other player has no way to move on.
+      expect(host.ui.queryByRole('button', { name: /next turn/i })).not.toBeInTheDocument()
+      await user.click(await guest.ui.findByRole('button', { name: 'Next turn' }))
+      await host.ui.findByText('Turn 3 of 4')
+    })
+
+    it('can skip the translation on the last turn to finish the round', async () => {
+      const { user, host, guest } = await startTranslated()
+      await confirmSentences(host, guest, user)
+      for (const device of [host, guest, host]) {
+        await user.click(await device.ui.findByRole('button', { name: 'Next turn' }))
+      }
+      await guest.ui.findByText('Turn 4 of 4')
+      await user.click(await guest.ui.findByRole('button', { name: 'Finish round' }))
+      await host.ui.findByRole('heading', { name: 'Round complete' })
+      await guest.ui.findByRole('heading', { name: 'Round complete' })
+    })
+
     it('lets the guest show the translation on their own turn', async () => {
       const { user, host, guest } = await startTranslated()
       await confirmSentences(host, guest, user)
       await host.ui.findByText('Turn 1 of 4')
       await user.click(host.ui.getByRole('button', { name: 'Show translation' }))
+      await host.ui.findByText('Translation')
       await user.click(host.ui.getByRole('button', { name: 'Next turn' }))
       await guest.ui.findByText('Turn 2 of 4')
       await user.click(await guest.ui.findByRole('button', { name: 'Show translation' }))
@@ -104,6 +135,8 @@ describe('round options', () => {
       await host.ui.findByText('Turn 1 of 4')
       for (const device of [host, guest, host, guest]) {
         await user.click(await device.ui.findByRole('button', { name: 'Show translation' }))
+        // Wait for the translation itself: moving on is possible before it, so the button alone proves nothing.
+        await device.ui.findByText('Translation')
         await user.click(await device.ui.findByRole('button', { name: /next turn|finish round/i }))
       }
       await host.ui.findByRole('heading', { name: 'Round complete' })

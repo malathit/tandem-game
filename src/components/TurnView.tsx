@@ -54,16 +54,17 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
         </p>
       )}
       {canAct ? (
-        // With translations on, the speaker shows it first; then both have seen it and can move on.
-        needsReveal ? (
-          <button type="button" className="primary" onClick={onReveal}>
-            Show translation
-          </button>
-        ) : (
-          <button type="button" className="primary" onClick={onNext}>
+        // With translations on, the speaker may show it first, or move on without showing it.
+        <>
+          {needsReveal && (
+            <button type="button" className="primary" onClick={onReveal}>
+              Show translation
+            </button>
+          )}
+          <button type="button" className={needsReveal ? undefined : 'primary'} onClick={onNext}>
             {isLastTurn ? 'Finish round' : 'Next turn'}
           </button>
-        )
+        </>
       ) : (
         <p role="status">Waiting for Player {turn.player} to finish their turn…</p>
       )}
