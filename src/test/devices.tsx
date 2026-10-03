@@ -57,8 +57,19 @@ export const sentenceOn = (device: { container: HTMLElement }) =>
   device.container.querySelector('.sentence')?.textContent
 
 
-/** The host picks a preset topic, looks at the review screen and starts the round. */
-export async function startRound(host: ReturnType<typeof open>, user: User, topic = 'Greetings and small talk') {
+/** Both players tell the game that their own sentences are fine, which starts the round. */
+export async function confirmSentences(host: ReturnType<typeof open>, guest: ReturnType<typeof open>, user: User) {
+  await user.click(await host.ui.findByRole('button', { name: 'Looks good' }))
+  await user.click(await guest.ui.findByRole('button', { name: 'Looks good' }))
+}
+
+/** The host picks a preset topic, then both players review their sentences and confirm them. */
+export async function startRound(
+  host: ReturnType<typeof open>,
+  guest: ReturnType<typeof open>,
+  user: User,
+  topic = 'Greetings and small talk',
+) {
   await user.click(await host.ui.findByRole('button', { name: topic }))
-  await user.click(await host.ui.findByRole('button', { name: 'Start round' }))
+  await confirmSentences(host, guest, user)
 }

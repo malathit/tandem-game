@@ -5,6 +5,7 @@ import type { Network } from '../online/network'
 import { useGuestSession, type GuestSession } from '../online/useGuestSession'
 import { LanguagePicker } from './LanguagePicker'
 import { PlayerChips } from './PlayerChips'
+import { RoundPreview } from './RoundPreview'
 import { StepIndicator } from './StepIndicator'
 import { TurnView } from './TurnView'
 
@@ -25,7 +26,7 @@ const PROBLEMS: Record<Exclude<GuestSession['status'], 'connecting' | 'connected
 
 /** The device that joined: it is Player 2 and shows what the host says is happening. */
 export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onLeave }: GuestRoomProps) {
-  const { status, room, chooseLanguage, nextTurn, reveal } = useGuestSession(network, code)
+  const { status, room, chooseLanguage, confirm, regenerate, nextTurn, reveal } = useGuestSession(network, code)
 
   function renderBody() {
     if (status === 'connecting') {
@@ -81,12 +82,24 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
 
     const pair = [room.hostLearning, guestLearning] as const
     if (round === null) {
+      const { review } = room
       return (
         <>
           <PlayerChips pair={pair} languages={languages} me={2} />
-          <p className="waiting" role="status">
-            Waiting for the host to choose a topic…
-          </p>
+          {review === null ? (
+            <p className="waiting" role="status">
+              Waiting for the host to choose a topic…
+            </p>
+          ) : (
+            <RoundPreview
+              me={2}
+              review={review}
+              topicLabel={topicName(staticSource, review.topic)}
+              languages={languages}
+              onConfirm={confirm}
+              onRegenerate={regenerate}
+            />
+          )}
         </>
       )
     }

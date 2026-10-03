@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { staticSource } from '../content/staticSource'
 import type { Language, LanguageCode } from '../content/types'
 import type { SentenceGenerator } from '../generation/generator'
-import { DEFAULT_ROUND_OPTIONS } from '../generation/types'
+import { DEFAULT_ROUND_OPTIONS, type GenerateTopic } from '../generation/types'
 import { topicName } from '../game/topicName'
 import { useRoundSetup } from '../game/useRoundSetup'
 import type { Network } from '../online/network'
@@ -15,6 +15,11 @@ import { StepIndicator } from './StepIndicator'
 import { TopicPicker } from './TopicPicker'
 import { TurnView } from './TurnView'
 
+const NOBODY_CONFIRMED = [false, false] as const
+
+/** The topic as the rest of the game knows it: a preset's id or the text the host typed. */
+const topicText = (topic: GenerateTopic) => (topic.kind === 'preset' ? topic.id : topic.text)
+
 interface HostRoomProps {
   network: Network
   languages: Language[]
@@ -26,12 +31,38 @@ interface HostRoomProps {
 
 /** The device that created the game: it is Player 1 and runs the game for both. */
 export function HostRoom({ network, languages, hostLearning, generator, onLeave }: HostRoomProps) {
-  const { status, code, room, partnerConnected, dispatch } = useHostSession(network, hostLearning)
+  // The guest can ask for new sentences, but the request is made from here, so the session calls back.
+  const guestRegenerate = useRef(() => {})
+  const { status, code, room, partnerConnected, dispatch } = useHostSession(network, hostLearning, () =>
+    guestRegenerate.current(),
+  )
   const { guestLearning, round } = room
   const pair = guestLearning === null ? null : ([room.hostLearning, guestLearning] as const)
   const setup = useRoundSetup(pair, generator)
+  const { state: setupState, back: backToTopics } = setup
   const [options, setOptions] = useState(DEFAULT_ROUND_OPTIONS)
   const step = pair === null ? 1 : round === null ? 2 : 3
+  const reviewing = setupState.phase === 'preview'
+  const roundRunning = round !== null
+
+  useEffect(() => {
+    guestRegenerate.current = setup.regenerate
+  })
+
+  // The guest reviews their sentences too, so the room carries a copy of the host's review.
+  useEffect(() => {
+    if (setupState.phase === 'preview') {
+      const { topic, turns, busy, error } = setupState
+      dispatch({ type: 'REVIEW_UPDATED', topic: topicText(topic), turns, busy, error })
+    } else {
+      dispatch({ type: 'REVIEW_CLOSED' })
+    }
+  }, [setupState, dispatch])
+
+  // Once both players have confirmed, the room starts the round and the review is over.
+  useEffect(() => {
+    if (roundRunning && reviewing) backToTopics()
+  }, [roundRunning, reviewing, backToTopics])
 
   function renderBody() {
     if (status === 'opening') {
@@ -68,23 +99,20 @@ export function HostRoom({ network, languages, hostLearning, generator, onLeave 
       )
     }
     if (round === null) {
-      const { state } = setup
-      if (state.phase === 'preview') {
-        const topic = state.topic.kind === 'preset' ? state.topic.id : state.topic.text
+      if (setupState.phase === 'preview') {
+        const { topic, turns, busy, error } = setupState
         return (
           <>
             <PlayerChips pair={pair} languages={languages} me={1} />
             <RoundPreview
-              setup={state}
-              topicLabel={topicName(staticSource, topic)}
+              me={1}
+              review={{ turns, busy, error, confirmed: room.review?.confirmed ?? NOBODY_CONFIRMED }}
+              topicLabel={topicName(staticSource, topicText(topic))}
               languages={languages}
-              onStart={() => {
-                dispatch({ type: 'START_ROUND', topic, turns: state.turns })
-                setup.back()
-              }}
+              onConfirm={() => dispatch({ type: 'CONFIRM', from: 1 })}
               onRegenerate={setup.regenerate}
               onCancel={setup.cancel}
-              onBack={setup.back}
+              onBack={backToTopics}
             />
           </>
         )

@@ -14,17 +14,28 @@ export interface HostSession {
   dispatch: (event: RoomEvent) => void
 }
 
+const ignore = () => {}
+
 /**
  * Opens a room and keeps it in sync with the guest. The host holds the real
  * game state; the guest sends requests and gets a full copy after every change.
  * Only one guest can be connected at a time.
  */
-export function useHostSession(network: Network, hostLearning: LanguageCode): HostSession {
+export function useHostSession(
+  network: Network,
+  hostLearning: LanguageCode,
+  /** The guest asked for new sentences; only the host's device can call the AI. */
+  onGuestRegenerate: () => void = ignore,
+): HostSession {
   const [room, dispatch] = useReducer(roomReducer, hostLearning, createRoom)
   const [status, setStatus] = useState<HostSession['status']>('opening')
   const [code, setCode] = useState<string | null>(null)
   const [partnerConnected, setPartnerConnected] = useState(false)
   const guest = useRef<Connection | null>(null)
+  const regenerate = useRef(onGuestRegenerate)
+  useEffect(() => {
+    regenerate.current = onGuestRegenerate
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -40,6 +51,10 @@ export function useHostSession(network: Network, hostLearning: LanguageCode): Ho
         const message = parseGuestMessage(raw)
         if (message?.type === 'hello') {
           dispatch({ type: 'GUEST_HELLO', learning: message.learning })
+        } else if (message?.type === 'confirm') {
+          dispatch({ type: 'CONFIRM', from: 2 })
+        } else if (message?.type === 'regenerate') {
+          regenerate.current()
         } else if (message?.type === 'next-turn') {
           dispatch({ type: 'NEXT_TURN', from: 2 })
         } else if (message?.type === 'reveal') {
@@ -50,6 +65,7 @@ export function useHostSession(network: Network, hostLearning: LanguageCode): Ho
         if (guest.current === connection) {
           guest.current = null
           setPartnerConnected(false)
+          dispatch({ type: 'GUEST_LEFT' })
         }
       })
       setPartnerConnected(true)

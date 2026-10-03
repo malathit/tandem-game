@@ -1,19 +1,39 @@
 import { isLanguageCode, type LanguageCode } from '../content/types'
 import type { Turn } from '../game/buildTurns'
 import type { GameState } from '../game/gameReducer'
+import { GENERATION_ERROR_KINDS, type GenerationErrorKind } from '../generation/types'
+
+/** The sentences the players are checking before a round, shown to both devices. */
+export interface ReviewState {
+  /** A preset topic's id or the text the host typed. */
+  topic: string
+  turns: Turn[]
+  /** The host is waiting for the AI. */
+  busy: boolean
+  error: GenerationErrorKind | null
+  /** Whether Player 1 and Player 2 have said their own sentences are fine. */
+  confirmed: readonly [boolean, boolean]
+}
 
 /** Everything both devices need to show the same screen. The host owns it. */
 export interface RoomState {
   hostLearning: LanguageCode
   /** null until the guest has chosen their language. */
   guestLearning: LanguageCode | null
-  /** null while the host is choosing a topic. */
+  /** The sentences being checked; null unless the host has chosen a topic and no round is running. */
+  review: ReviewState | null
+  /** null while the host is choosing a topic or the players are reviewing. */
   round: { topic: string; game: GameState } | null
 }
 
 export type HostMessage = { type: 'state'; state: RoomState }
 
-export type GuestMessage = { type: 'hello'; learning: LanguageCode } | { type: 'next-turn' } | { type: 'reveal' }
+export type GuestMessage =
+  | { type: 'hello'; learning: LanguageCode }
+  | { type: 'confirm' }
+  | { type: 'regenerate' }
+  | { type: 'next-turn' }
+  | { type: 'reveal' }
 
 // Messages come from another device, so nothing in them is trusted: each parser
 // checks the shape and size of the data and returns null for anything else.
@@ -66,18 +86,43 @@ function parseGame(raw: unknown): GameState | null {
   return { turns, index, status, revealed }
 }
 
+function parseReview(raw: unknown): ReviewState | null {
+  if (!isRecord(raw) || !isText(raw.topic) || !Array.isArray(raw.turns) || raw.turns.length > MAX_TURNS) {
+    return null
+  }
+  const turns: Turn[] = []
+  for (const item of raw.turns) {
+    const turn = parseTurn(item)
+    if (!turn) return null
+    turns.push(turn)
+  }
+  const { busy, error, confirmed } = raw
+  if (typeof busy !== 'boolean') return null
+  if (error !== null && !GENERATION_ERROR_KINDS.some((kind) => kind === error)) return null
+  if (!Array.isArray(confirmed) || confirmed.length !== 2 || confirmed.some((flag) => typeof flag !== 'boolean')) {
+    return null
+  }
+  return {
+    topic: raw.topic,
+    turns,
+    busy,
+    error: error as GenerationErrorKind | null,
+    confirmed: [confirmed[0], confirmed[1]],
+  }
+}
+
 function parseRoomState(raw: unknown): RoomState | null {
   if (!isRecord(raw) || !isLanguageCode(raw.hostLearning)) return null
   const { guestLearning, round } = raw
   if (guestLearning !== null && !isLanguageCode(guestLearning)) return null
-  if (round === null) {
-    return { hostLearning: raw.hostLearning, guestLearning, round: null }
-  }
+  // A host that has not been updated yet sends no review, which means there is none.
+  const review = raw.review === undefined || raw.review === null ? null : parseReview(raw.review)
+  if (raw.review !== undefined && raw.review !== null && review === null) return null
+  const common = { hostLearning: raw.hostLearning, guestLearning, review }
+  if (round === null) return { ...common, round: null }
   if (!isRecord(round) || !isText(round.topic)) return null
   const game = parseGame(round.game)
-  return game
-    ? { hostLearning: raw.hostLearning, guestLearning, round: { topic: round.topic, game } }
-    : null
+  return game ? { ...common, round: { topic: round.topic, game } } : null
 }
 
 export function parseHostMessage(raw: unknown): HostMessage | null {
@@ -90,6 +135,8 @@ export function parseGuestMessage(raw: unknown): GuestMessage | null {
   if (!isRecord(raw)) return null
   if (raw.type === 'next-turn') return { type: 'next-turn' }
   if (raw.type === 'reveal') return { type: 'reveal' }
+  if (raw.type === 'confirm') return { type: 'confirm' }
+  if (raw.type === 'regenerate') return { type: 'regenerate' }
   if (raw.type === 'hello' && isLanguageCode(raw.learning)) {
     return { type: 'hello', learning: raw.learning }
   }

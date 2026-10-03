@@ -1,7 +1,7 @@
 import { render, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { createGame, currentStep, joinGame, languages, open, sentenceOn, startJoining, startRound } from '../test/devices'
+import { confirmSentences, createGame, currentStep, joinGame, languages, open, sentenceOn, startJoining, startRound } from '../test/devices'
 import { english, german } from '../test/generators'
 import { createMemoryNetwork } from '../test/memoryNetwork'
 import { OnlineGame } from './OnlineGame'
@@ -41,7 +41,7 @@ describe('playing a whole round on two devices', () => {
     expect(host.ui.getByText(/Player 2 is learning German/)).toBeInTheDocument()
     expect(guest.ui.getByText(/Player 2 is learning German \(you\)/)).toBeInTheDocument()
 
-    await startRound(host, user)
+    await startRound(host, guest, user)
     await host.ui.findByText('Turn 1 of 4')
     await guest.ui.findByText('Turn 1 of 4')
 
@@ -72,7 +72,7 @@ describe('playing a whole round on two devices', () => {
     expect(guest.ui.getByText(/waiting for the host to start another round/i)).toBeInTheDocument()
 
     await user.click(host.ui.getByRole('button', { name: 'Play again' }))
-    await user.click(await host.ui.findByRole('button', { name: 'Start round' }))
+    await confirmSentences(host, guest, user)
     await host.ui.findByText('Turn 1 of 4')
     await guest.ui.findByText('Turn 1 of 4')
   })
@@ -82,7 +82,7 @@ describe('playing a whole round on two devices', () => {
     const network = createMemoryNetwork()
     const host = await createGame(network, user)
     const guest = await joinGame(network, user, host.code)
-    await startRound(host, user, 'Weather')
+    await startRound(host, guest, user, 'Weather')
     await guest.ui.findByText('Turn 1 of 4')
 
     await user.click(host.ui.getByRole('button', { name: 'Change topic' }))
@@ -188,7 +188,7 @@ describe('progress steps', () => {
     expect(currentStep(host)).toBe('Topic')
     expect(currentStep(guest)).toBe('Topic')
 
-    await startRound(host, user)
+    await startRound(host, guest, user)
     await guest.ui.findByText('Turn 1 of 4')
     expect(currentStep(host)).toBe('Play')
     expect(currentStep(guest)).toBe('Play')
@@ -248,7 +248,7 @@ describe('connection problems', () => {
     const network = createMemoryNetwork()
     const host = await createGame(network, user)
     const guest = await joinGame(network, user, host.code)
-    await startRound(host, user)
+    await startRound(host, guest, user)
     await user.click(await host.ui.findByRole('button', { name: 'Next turn' }))
     await guest.ui.findByText('Turn 2 of 4')
 

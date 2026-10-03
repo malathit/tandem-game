@@ -8,6 +8,10 @@ export interface GuestSession {
   /** The host's latest copy of the game; null until the first one arrives. */
   room: RoomState | null
   chooseLanguage: (learning: LanguageCode) => void
+  /** Says the sentences this player will read are fine. */
+  confirm: () => void
+  /** Asks the host for new sentences. */
+  regenerate: () => void
   nextTurn: () => void
   reveal: () => void
 }
@@ -57,6 +61,8 @@ export function useGuestSession(network: Network, code: string): GuestSession {
     status,
     room,
     chooseLanguage: useCallback((learning) => send({ type: 'hello', learning }), [send]),
+    confirm: useCallback(() => send({ type: 'confirm' }), [send]),
+    regenerate: useCallback(() => send({ type: 'regenerate' }), [send]),
     nextTurn: useCallback(() => send({ type: 'next-turn' }), [send]),
     reveal: useCallback(() => send({ type: 'reveal' }), [send]),
   }

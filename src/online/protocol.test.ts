@@ -4,6 +4,7 @@ import { parseGuestMessage, parseHostMessage, type RoomState } from './protocol'
 const roomState: RoomState = {
   hostLearning: 'en',
   guestLearning: 'de',
+  review: null,
   round: {
     topic: 'modal-verbs',
     game: {
@@ -33,6 +34,11 @@ describe('parseGuestMessage', () => {
 
   it('accepts reveal', () => {
     expect(parseGuestMessage({ type: 'reveal', extra: 'x' })).toEqual({ type: 'reveal' })
+  })
+
+  it('accepts confirm and regenerate', () => {
+    expect(parseGuestMessage({ type: 'confirm', extra: 'x' })).toEqual({ type: 'confirm' })
+    expect(parseGuestMessage({ type: 'regenerate', extra: 'x' })).toEqual({ type: 'regenerate' })
   })
 
   it('accepts next-turn and drops unexpected fields', () => {
@@ -78,8 +84,47 @@ describe('parseHostMessage', () => {
   })
 
   it('accepts a lobby state with no guest and no round', () => {
-    const lobby = { hostLearning: 'en', guestLearning: null, round: null }
+    const lobby = { hostLearning: 'en', guestLearning: null, round: null, review: null }
     expect(parseHostMessage({ type: 'state', state: lobby })).toEqual({ type: 'state', state: lobby })
+  })
+
+  it('accepts a state from a host that does not know about reviews yet, as having none', () => {
+    const old = { hostLearning: 'en', guestLearning: 'de', round: null }
+    expect(parseHostMessage({ type: 'state', state: old })?.state.review).toBeNull()
+  })
+
+  describe('a review', () => {
+    const turn = { player: 1, sentence: { id: 'a', text: 'Ich kann schwimmen.' }, learning: 'en' }
+    const review = { topic: 'greetings', turns: [turn], busy: false, error: null, confirmed: [true, false] }
+    const reviewing = (change: Record<string, unknown>) => ({ ...roomState, review: { ...review, ...change } })
+
+    it('is accepted with who has confirmed and any error', () => {
+      expect(parseHostMessage({ type: 'state', state: reviewing({ error: 'limit-reached', busy: true }) })).toEqual({
+        type: 'state',
+        state: reviewing({ error: 'limit-reached', busy: true }),
+      })
+    })
+
+    it('drops unexpected fields from it', () => {
+      const parsed = parseHostMessage({ type: 'state', state: reviewing({ secret: 'x' }) })
+      expect(parsed?.state.review).toEqual(review)
+    })
+
+    it.each([
+      ['a review that is not an object', { ...roomState, review: 'yes' }],
+      ['no topic', reviewing({ topic: '' })],
+      ['a very long topic', reviewing({ topic: 'x'.repeat(301) })],
+      ['turns that are not a list', reviewing({ turns: 'x' })],
+      ['too many turns', reviewing({ turns: Array.from({ length: 21 }, () => turn) })],
+      ['a bad turn', reviewing({ turns: [{ ...turn, player: 3 }] })],
+      ['a busy flag that is not a boolean', reviewing({ busy: 'yes' })],
+      ['an error that does not exist', reviewing({ error: 'boom' })],
+      ['a missing error', reviewing({ error: undefined })],
+      ['confirmations that are not two booleans', reviewing({ confirmed: [true] })],
+      ['confirmations that are not booleans', reviewing({ confirmed: ['yes', 'no'] })],
+    ])('rejects %s', (_name, state) => {
+      expect(parseHostMessage({ type: 'state', state })).toBeNull()
+    })
   })
 
   it.each([

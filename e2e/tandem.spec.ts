@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { parseModelOutput } from '../src/generation/validate'
-import { playRound, reviewedTurns, startGame, TOPIC, type Turn } from './game'
+import { confirmSentences, playRound, reviewedTurns, startGame, TOPIC, type Turn } from './game'
 
 // Which requests go to the Worker; E2E_WORKER_PATTERN aims this at a local Worker.
 const WORKER = new RegExp(process.env.E2E_WORKER_PATTERN ?? 'workers\\.dev')
@@ -25,17 +25,19 @@ test('a preset topic is written by the AI, can be regenerated, and is played on 
   await host.getByRole('button', { name: TOPIC }).click()
   await answered
   await expect(host.getByText(/Written by AI/)).toBeVisible({ timeout: 30_000 })
-  const first = await reviewedTurns(host)
+  const first = await reviewedTurns(game)
   expectUsableSentences(first)
 
   const again = workerAnswered(host)
   await host.getByRole('button', { name: 'Regenerate with AI' }).click()
   await again
   await expect(host.getByRole('button', { name: 'Regenerate with AI' })).toBeEnabled({ timeout: 30_000 })
-  const second = await reviewedTurns(host)
+  // The guest's screen follows the host's: its button is back once the new sentences have arrived.
+  await expect(game.guest.getByRole('button', { name: 'Looks good' })).toBeEnabled({ timeout: 30_000 })
+  const second = await reviewedTurns(game)
   expectUsableSentences(second)
 
-  await host.getByRole('button', { name: 'Start round' }).click()
+  await confirmSentences(game)
   await playRound(game, second)
 })
 
@@ -50,16 +52,16 @@ test('the host can choose fewer sentences with translations, shown to both after
   await answered
   await expect(host.getByText(/Written by AI/)).toBeVisible({ timeout: 30_000 })
 
-  const turns = await reviewedTurns(host, 2)
+  const turns = await reviewedTurns(game, 1)
   expectUsableSentences(turns)
+
+  await confirmSentences(game)
+  const translations = await playRound(game, turns, { translated: true })
   // Player 1 reads German and translates into English; Player 2 the other way round.
   for (const [player, language] of [[1, 'en'], [2, 'de']] as const) {
-    const translation = turns.find((turn) => turn.player === player)?.translation ?? ''
+    const translation = translations.find((turn) => turn.player === player)?.text ?? ''
     expect(parseModelOutput({ sentences: [translation] }, language, 1), `Player ${player} translation: ${translation}`).toMatchObject({ ok: true })
   }
-
-  await host.getByRole('button', { name: 'Start round' }).click()
-  await playRound(game, turns)
 })
 
 test('a custom topic is written by the AI and played on both devices', async ({ browser }) => {
@@ -72,10 +74,10 @@ test('a custom topic is written by the AI and played on both devices', async ({ 
   await answered
   await expect(host.getByText(/Written by AI/)).toBeVisible({ timeout: 30_000 })
 
-  const generated = await reviewedTurns(host)
+  const generated = await reviewedTurns(game)
   expectUsableSentences(generated)
 
-  await host.getByRole('button', { name: 'Start round' }).click()
+  await confirmSentences(game)
   await playRound(game, generated)
 })
 
@@ -93,8 +95,11 @@ test('when the AI service cannot be reached, the host is told and nothing starts
     await pick()
     await expect(host.getByRole('alert')).toContainText("can't be reached")
     await expect(host.getByRole('button', { name: 'Try again' })).toBeVisible()
-    await expect(host.getByRole('button', { name: 'Start round' })).toHaveCount(0)
+    await expect(host.getByRole('button', { name: 'Looks good' })).toHaveCount(0)
+    // The guest is told too, and can wait for the host to choose again.
+    await expect(guest.getByRole('alert')).toContainText("can't be reached", { timeout: 30_000 })
     await host.getByRole('button', { name: 'Choose another topic' }).click()
+    await expect(guest.getByText('Waiting for the host to choose a topic…')).toBeVisible({ timeout: 30_000 })
   }
   await expect(guest.getByText('Waiting for the host to choose a topic…')).toBeVisible()
 })

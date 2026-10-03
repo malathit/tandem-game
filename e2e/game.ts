@@ -7,8 +7,6 @@ export const TOPIC = 'Greetings and small talk'
 export interface Turn {
   player: 1 | 2
   text: string
-  /** Only when the host asked for translations. */
-  translation?: string
 }
 
 export interface Game {
@@ -39,39 +37,61 @@ export async function startGame(browser: Browser): Promise<Game> {
   return { host, guest }
 }
 
-/** The sentences on the review screen, in the order they will be played. */
-export async function reviewedTurns(host: Page, expected = 4): Promise<Turn[]> {
-  const items = host.locator('.preview-list li')
+/** The sentences one player is shown on their review screen, in the order they will be played. */
+async function ownSentences(page: Page, expected: number): Promise<string[]> {
+  const items = page.locator('.preview-list li')
   await expect(items).toHaveCount(expected)
   return items.evaluateAll((elements) =>
-    elements.map((element) => ({
-      player: Number((element as HTMLElement).dataset.player) as 1 | 2,
-      // The sentence is the text node between the "Player N translates into …" label and the translation.
-      text: [...element.childNodes]
+    elements.map((element) =>
+      // The sentence is the text node after the "You translate into …" label.
+      [...element.childNodes]
         .filter((node) => node.nodeType === Node.TEXT_NODE)
         .map((node) => node.textContent)
         .join(''),
-      translation: element.querySelector('.preview-translation')?.textContent ?? undefined,
-    })),
+    ),
   )
 }
 
-/** Plays a round to its end, checking that both devices show the same sentence on every turn. */
-export async function playRound({ host, guest }: Game, turns: Turn[]) {
+/** What the two review screens show together: each player only sees the sentences they read themselves. */
+export async function reviewedTurns({ host, guest }: Game, perPlayer = 2): Promise<Turn[]> {
+  const [first, second] = await Promise.all([ownSentences(host, perPlayer), ownSentences(guest, perPlayer)])
+  return first.flatMap((text, i): Turn[] => [
+    { player: 1, text },
+    { player: 2, text: second[i] },
+  ])
+}
+
+/** Both players say their own sentences are fine, which starts the round. */
+export async function confirmSentences({ host, guest }: Game) {
+  await host.getByRole('button', { name: 'Looks good' }).click()
+  // The guest's screen follows the host's, so give the connection time.
+  await guest.getByRole('button', { name: 'Looks good' }).click({ timeout: 30_000 })
+}
+
+/**
+ * Plays a round to its end, checking that both devices show the same sentence on every turn.
+ * With `translated`, each speaker shows the translation first, which is returned per player.
+ */
+export async function playRound({ host, guest }: Game, turns: Turn[], { translated = false } = {}) {
+  const translations: Turn[] = []
   for (const [index, turn] of turns.entries()) {
     await expect(host.locator('.sentence')).toHaveText(turn.text)
     await expect(guest.locator('.sentence')).toHaveText(turn.text)
     const mover = turn.player === 1 ? host : guest
-    if (turn.translation !== undefined) {
+    if (translated) {
       // Hidden from both until the speaker shows it.
       await expect(host.locator('.translation')).toHaveCount(0)
       await expect(guest.locator('.translation')).toHaveCount(0)
       await mover.getByRole('button', { name: 'Show translation' }).click()
-      await expect(host.locator('.translation')).toContainText(turn.translation)
-      await expect(guest.locator('.translation')).toContainText(turn.translation)
+      await expect(host.locator('.translation')).toBeVisible()
+      await expect(guest.locator('.translation')).toBeVisible()
+      const shown = (await host.locator('.translation').innerText()).replace(/^Translation\s*/, '')
+      await expect(guest.locator('.translation')).toContainText(shown)
+      translations.push({ player: turn.player, text: shown })
     }
     await mover.getByRole('button', { name: index === turns.length - 1 ? 'Finish round' : 'Next turn' }).click()
   }
   await expect(host.getByRole('heading', { name: 'Round complete' })).toBeVisible()
   await expect(guest.getByRole('heading', { name: 'Round complete' })).toBeVisible()
+  return translations
 }

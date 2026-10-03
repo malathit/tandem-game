@@ -31,11 +31,13 @@ export interface GeneratedSentences {
   translations?: string[]
 }
 
-export type GenerationErrorKind =
-  /** The service is down or unreachable. */
-  | 'unavailable'
-  /** The free daily allowance is used up. */
-  | 'limit-reached'
-  /** The service answered, but not with usable sentences. */
-  | 'invalid'
-  | 'cancelled'
+/**
+ * Why generating failed:
+ * - `unavailable`: the service is down or unreachable.
+ * - `limit-reached`: the free daily allowance is used up.
+ * - `invalid`: the service answered, but not with usable sentences.
+ * - `cancelled`: the request was stopped on purpose.
+ */
+export const GENERATION_ERROR_KINDS = ['unavailable', 'limit-reached', 'invalid', 'cancelled'] as const
+
+export type GenerationErrorKind = (typeof GENERATION_ERROR_KINDS)[number]
