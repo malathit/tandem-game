@@ -2,7 +2,8 @@ import { expect, test, type Page } from '@playwright/test'
 import { parseModelOutput } from '../src/generation/validate'
 import { playRound, reviewedTurns, startGame, TOPIC, type Turn } from './game'
 
-const WORKER = /workers\.dev/
+// Which requests go to the Worker; E2E_WORKER_PATTERN aims this at a local Worker.
+const WORKER = new RegExp(process.env.E2E_WORKER_PATTERN ?? 'workers\\.dev')
 
 /** Player 1 is learning English so reads German; Player 2 is learning German so reads English. */
 function expectUsableSentences(turns: Turn[]) {

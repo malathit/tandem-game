@@ -57,7 +57,7 @@ host's browser ──▶ Cloudflare Worker ──▶ stored sentences? ──▶
 ### Try it locally
 
 ```sh
-cd worker && npx wrangler@4 dev --port 8787     # a local Worker that calls the real AI (free allowance)
+cd worker && npx wrangler@4.86.0 dev --config wrangler.toml --port 8787     # a local Worker that calls the real AI (free allowance)
 VITE_GENERATE_URL=http://localhost:8787 npm run dev       # in another terminal
 VITE_LIVE_WORKER_URL=http://localhost:8787 npx vitest run src/generation/live   # optional smoke test of the client
 ```
@@ -68,10 +68,10 @@ VITE_LIVE_WORKER_URL=http://localhost:8787 npx vitest run src/generation/live   
 
 ```sh
 cd worker
-npx wrangler@4 deploy
+npx wrangler@4.86.0 deploy --config wrangler.toml
 ```
 
-The first deploy asks to create the `POOL` KV namespace; accept. (Or create it with `npx wrangler@4 kv namespace create POOL` and put the printed `id` in `worker/wrangler.toml`.) It prints the Worker's address, for example `https://tandem-generate.<your-subdomain>.workers.dev`.
+Use exactly this wrangler version and `--config`: newer wrangler versions (4.147 at the time of writing) detect this Vite project and deploy the whole game as a separate static-site Worker, and edit `package.json` and `vite.config.ts` on the way. The first deploy asks to create the `POOL` KV namespace; accept. (Or create it with `npx wrangler@4 kv namespace create POOL` and put the printed `id` in `worker/wrangler.toml`.) It prints the Worker's address, for example `https://tandem-generate.<your-subdomain>.workers.dev`.
 
 Then, in the GitHub repository, add an **Actions variable** (Settings → Secrets and variables → Actions → Variables) named `VITE_GENERATE_URL` with that address. It is public, not a secret. The next push to `main` builds the page with it. Without the variable the AI features stay hidden.
 
