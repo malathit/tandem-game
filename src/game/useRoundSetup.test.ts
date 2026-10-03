@@ -284,3 +284,65 @@ describe('useRoundSetup', () => {
     })
   })
 })
+
+describe('useRoundSetup for one player', () => {
+  // The player speaks German and learns English: [what they learn, what they speak].
+  const solo = ['en', 'de'] as const
+  const options = { count: 2, translate: true, difficulty: 'medium' } as const
+
+  function startSolo() {
+    const manual = manualGenerator()
+    const { result } = renderHook(() => useRoundSetup(solo, manual.generator, { solo: true }))
+    return { ...manual, result }
+  }
+
+  it('asks only for sentences in the language the player speaks', async () => {
+    const { result, pending, answerAll } = startSolo()
+    act(() => result.current.choose(preset, options))
+
+    expect(pending.map((p) => p.request.language)).toEqual(['de'])
+    act(() => answerAll())
+    await waitFor(() => expect(result.current.state).toMatchObject({ phase: 'preview', busy: false }))
+  })
+
+  it('makes every turn the player\'s, reading German and translating into English', async () => {
+    const { result, answerAll } = startSolo()
+    act(() => result.current.choose(preset, options))
+    act(() => answerAll())
+    await waitFor(() => expect(result.current.state).toMatchObject({ phase: 'preview', busy: false }))
+
+    const { turns } = result.current.state as Extract<typeof result.current.state, { phase: 'preview' }>
+    expect(turns).toHaveLength(2)
+    expect(turns.every((turn) => turn.player === 1 && turn.learning === 'en')).toBe(true)
+    expect(turns.map((turn) => turn.sentence.text).sort()).toEqual([...german].sort())
+  })
+
+  it('asks for one new request when regenerating, skipping the stored sentences', async () => {
+    const { result, pending, answerAll } = startSolo()
+    act(() => result.current.choose(preset, options))
+    act(() => answerAll())
+    await waitFor(() => expect(result.current.state).toMatchObject({ busy: false }))
+
+    act(() => result.current.regenerate())
+    expect(pending).toHaveLength(1)
+    expect(pending[0].request).toMatchObject({ language: 'de', fresh: true })
+  })
+
+  it('keeps the error and lets the player try again', async () => {
+    const { result, failAll, pending } = startSolo()
+    act(() => result.current.choose(preset, options))
+    act(() => failAll('limit-reached'))
+    await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, error: 'limit-reached' }))
+
+    act(() => result.current.regenerate())
+    expect(pending).toHaveLength(1)
+  })
+
+  it('stops the running request when cancelled', () => {
+    const { result, pending } = startSolo()
+    act(() => result.current.choose(preset, options))
+    act(() => result.current.cancel())
+    expect(pending[0].signal?.aborted).toBe(true)
+    expect(result.current.state).toEqual({ phase: 'choosing' })
+  })
+})

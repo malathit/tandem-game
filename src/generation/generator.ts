@@ -1,4 +1,4 @@
-import type { LanguagePair } from '../content/types'
+import type { LanguageCode, LanguagePair, Sentence } from '../content/types'
 import type { SentencesByLanguage } from '../game/buildTurns'
 import type { GenerateRequest, GenerateTopic, GeneratedSentences, GenerationErrorKind, RoundOptions } from './types'
 import { parseModelOutput, parseTranslatedOutput } from './validate'
@@ -108,6 +108,24 @@ export function createHttpGenerator(
   }
 }
 
+/** Generates the sentences of one language: the one request every round is made of. */
+export async function generateForLanguage(
+  generator: SentenceGenerator,
+  language: LanguageCode,
+  topic: GenerateTopic,
+  fresh: boolean,
+  options: RoundOptions,
+  signal?: AbortSignal,
+): Promise<Sentence[]> {
+  if (signal?.aborted) throw new GenerationError('cancelled')
+  const { sentences, translations } = await generator.generate({ language, topic, fresh, ...options }, signal)
+  return sentences.map((text, i) => ({
+    id: `ai-${language}-${i + 1}`,
+    text,
+    ...(translations && { translation: translations[i] }),
+  }))
+}
+
 /**
  * Generates the sentences for both languages of a round at the same time.
  * If one language fails, the other request is cancelled and that error is thrown.
@@ -129,18 +147,7 @@ export async function generateForPair(
     const entries = await Promise.all(
       pair.map(async (language) => {
         try {
-          const { sentences, translations } = await generator.generate(
-            { language, topic, fresh, ...options },
-            controller.signal,
-          )
-          return [
-            language,
-            sentences.map((text, i) => ({
-              id: `ai-${language}-${i + 1}`,
-              text,
-              ...(translations && { translation: translations[i] }),
-            })),
-          ] as const
+          return [language, await generateForLanguage(generator, language, topic, fresh, options, controller.signal)] as const
         } catch (error) {
           controller.abort()
           throw error

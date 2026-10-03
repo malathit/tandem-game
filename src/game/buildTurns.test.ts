@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Sentence } from '../content/types'
-import { buildTurns } from './buildTurns'
+import { buildSoloTurns, buildTurns } from './buildTurns'
 
 const make = (prefix: string, count: number): Sentence[] =>
   Array.from({ length: count }, (_, i) => ({ id: `${prefix}${i + 1}`, text: `${prefix} ${i + 1}` }))
@@ -67,5 +67,27 @@ describe('buildTurns', () => {
   it('does not change the lists it is given', () => {
     buildTurns(pair, sentences)
     expect(sentences.en.map((s) => s.id)).toEqual(['en1', 'en2', 'en3', 'en4'])
+  })
+})
+
+describe('buildSoloTurns', () => {
+  it('gives every turn to Player 1, reading the native language and translating into the one being learned', () => {
+    const turns = buildSoloTurns('en', sentences.de, 3, keepOrder)
+    expect(turns).toEqual([
+      { player: 1, sentence: { id: 'de1', text: 'de 1' }, learning: 'en' },
+      { player: 1, sentence: { id: 'de2', text: 'de 2' }, learning: 'en' },
+      { player: 1, sentence: { id: 'de3', text: 'de 3' }, learning: 'en' },
+    ])
+  })
+
+  it('shuffles the sentences without changing the list it was given', () => {
+    const turns = buildSoloTurns('en', sentences.de, 4, reverse)
+    expect(turns.map((t) => t.sentence.id)).toEqual(['de4', 'de3', 'de2', 'de1'])
+    expect(sentences.de.map((s) => s.id)).toEqual(['de1', 'de2', 'de3', 'de4'])
+  })
+
+  it('gives fewer turns when there are fewer sentences than asked for, and none when there are none', () => {
+    expect(buildSoloTurns('en', sentences.de.slice(0, 2), 5, keepOrder)).toHaveLength(2)
+    expect(buildSoloTurns('en', [], 5, keepOrder)).toEqual([])
   })
 })

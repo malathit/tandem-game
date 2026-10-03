@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { staticSource } from '../content/staticSource'
 import type { ContentSource, LanguagePair } from '../content/types'
-import { GenerationError, generateForPair, type SentenceGenerator } from '../generation/generator'
+import { GenerationError, generateForLanguage, generateForPair, type SentenceGenerator } from '../generation/generator'
 import { DEFAULT_ROUND_OPTIONS, type GenerateTopic, type GenerationErrorKind, type RoundOptions } from '../generation/types'
-import { buildTurns, type Turn } from './buildTurns'
+import { buildSoloTurns, buildTurns, type Turn } from './buildTurns'
 
 export type RoundSetup =
   /** Picking a topic. */
@@ -21,14 +21,21 @@ export type RoundSetup =
 
 const choosing: RoundSetup = { phase: 'choosing' }
 
+interface RoundSetupOptions {
+  /** One player: only sentences in their own language are written, and every turn is theirs. */
+  solo?: boolean
+  source?: ContentSource
+}
+
 /**
  * The host's side of starting a round: pick a topic, review the AI's sentences, optionally ask for new ones.
  * `pair` is null until the partner has joined, and nothing can be chosen before then.
+ * With `solo`, `pair` is [what the player learns, what they speak] and there is no partner.
  */
 export function useRoundSetup(
   pair: LanguagePair | null,
   generator: SentenceGenerator | undefined,
-  source: ContentSource = staticSource,
+  { solo = false, source = staticSource }: RoundSetupOptions = {},
 ) {
   const [state, setState] = useState<RoundSetup>(choosing)
   // The request that may still change the state; aborting it makes its result count for nothing.
@@ -47,13 +54,19 @@ export function useRoundSetup(
       const mine = new AbortController()
       current.current = mine
       try {
-        const sentences = await generateForPair(generator, pair, topic, fresh, options, mine.signal)
+        const turns = solo
+          ? buildSoloTurns(
+              pair[0],
+              await generateForLanguage(generator, pair[1], topic, fresh, options, mine.signal),
+              options.count,
+            )
+          : buildTurns(pair, await generateForPair(generator, pair, topic, fresh, options, mine.signal), options.count)
         if (mine.signal.aborted) return
         setState({
           phase: 'preview',
           topic,
           options,
-          turns: buildTurns(pair, sentences, options.count),
+          turns,
           busy: false,
           error: null,
         })
@@ -65,7 +78,7 @@ export function useRoundSetup(
         if (current.current === mine) current.current = null
       }
     },
-    [generator, pair, stop],
+    [generator, pair, solo, stop],
   )
 
   /** `topic` is a preset's id or the text the host typed. */

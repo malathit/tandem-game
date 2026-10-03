@@ -46,3 +46,18 @@ export function buildTurns(
     { player: 2, sentence: forPlayer2[i], learning: learnedByPlayer2 },
   ])
 }
+
+/**
+ * Builds the turns of a solo round: every turn is Player 1's, reading `sentences` (written in their native language)
+ * and translating into `learning`. Gives `count` turns, fewer if there are fewer sentences.
+ */
+export function buildSoloTurns(
+  learning: LanguageCode,
+  sentences: readonly Sentence[],
+  count: number = DEFAULT_COUNT,
+  shuffle: Shuffle = shuffled,
+): Turn[] {
+  return shuffle(sentences)
+    .slice(0, count)
+    .map((sentence) => ({ player: 1, sentence, learning }))
+}

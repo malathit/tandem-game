@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
-import { createHttpGenerator, generateForPair, GenerationError, type SentenceGenerator } from './generator'
+import { createHttpGenerator, generateForLanguage, generateForPair, GenerationError, type SentenceGenerator } from './generator'
 import type { GeneratedSentences, GenerateRequest, GenerationErrorKind, RoundOptions } from './types'
 
 const URL = 'https://worker.example/'
@@ -266,6 +266,42 @@ describe('generateForPair', () => {
     const controller = new AbortController()
     controller.abort()
     expect(await kindOf(generateForPair({ generate }, pair, topic, false, options, controller.signal))).toBe('cancelled')
+    expect(generate).not.toHaveBeenCalled()
+  })
+})
+
+describe('generateForLanguage', () => {
+  const german = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.']
+  const topic = { kind: 'custom', text: 'my pet dragon' } as const
+  const options: RoundOptions = { count: 2, translate: true, difficulty: 'hard' }
+
+  it('makes exactly one request, for that language, with the options', async () => {
+    const generate = vi.fn(async (_req: GenerateRequest) => ({ sentences: german, translations: ['one', 'two'] }))
+    const result = await generateForLanguage({ generate }, 'de', topic, true, options)
+
+    expect(generate).toHaveBeenCalledTimes(1)
+    expect(generate.mock.calls[0][0]).toEqual({ language: 'de', topic, fresh: true, ...options })
+    expect(result).toEqual([
+      { id: 'ai-de-1', text: german[0], translation: 'one' },
+      { id: 'ai-de-2', text: german[1], translation: 'two' },
+    ])
+  })
+
+  it('leaves out the translation when there is none', async () => {
+    const result = await generateForLanguage({ generate: async () => ({ sentences: german }) }, 'de', topic, false, options)
+    expect(result[0]).toEqual({ id: 'ai-de-1', text: german[0] })
+  })
+
+  it('fails with the generator error', async () => {
+    const generator = { generate: () => Promise.reject(new GenerationError('invalid')) }
+    expect(await kindOf(generateForLanguage(generator, 'de', topic, false, options))).toBe('invalid')
+  })
+
+  it('does not ask at all when already cancelled', async () => {
+    const generate = vi.fn(async () => ({ sentences: german }))
+    const controller = new AbortController()
+    controller.abort()
+    expect(await kindOf(generateForLanguage({ generate }, 'de', topic, false, options, controller.signal))).toBe('cancelled')
     expect(generate).not.toHaveBeenCalled()
   })
 })
