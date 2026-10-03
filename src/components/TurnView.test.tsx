@@ -104,7 +104,7 @@ describe('TurnView', () => {
   it('shows the current turn and lets the acting player move on', async () => {
     const { user, onNext } = setup(playing)
     expect(screen.getByText('Turn 1 of 2')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Player 1, translate into English:' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Your turn: translate into English' })).toBeInTheDocument()
     expect(screen.getByText('Ich kann schwimmen.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next turn' }))
     expect(onNext).toHaveBeenCalledOnce()
@@ -114,7 +114,8 @@ describe('TurnView', () => {
     setup(playing, { canAct: false })
     expect(screen.getByText('Ich kann schwimmen.')).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Waiting for Player 1')
+    expect(screen.getByRole('status')).toHaveTextContent('Waiting for your partner to finish their turn')
+    expect(screen.getByRole('heading', { name: "Your partner's turn: translate into English" })).toBeInTheDocument()
   })
 
   it('offers Finish round on the last turn', () => {

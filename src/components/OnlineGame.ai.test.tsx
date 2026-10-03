@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { GenerationError, type SentenceGenerator } from '../generation/generator'
 import type { GenerationErrorKind } from '../generation/types'
-import { confirmSentences, createGame, joinGame, sentenceOn } from '../test/devices'
+import { confirmSentences, createGame, joinGame, reviewing, sentenceOn, startJoining, type HostChoices } from '../test/devices'
 import { english, german, instantGenerator } from '../test/generators'
 import { createMemoryNetwork } from '../test/memoryNetwork'
 
@@ -30,12 +30,13 @@ function failingGenerator(kind: GenerationErrorKind) {
   return generator
 }
 
-async function startWithGenerator(generator: SentenceGenerator) {
+/** The host sets the topic first; the sentences are asked for as soon as the guest has joined. */
+async function startWithGenerator(generator: SentenceGenerator, choices: HostChoices = {}) {
   const user = userEvent.setup()
   const network = createMemoryNetwork()
-  const host = await createGame(network, user, generator)
+  const host = await createGame(network, user, generator, choices)
   const guest = await joinGame(network, user, host.code)
-  await host.ui.findByRole('button', { name: 'Greetings and small talk' })
+  await reviewing(host)
   return { user, host, guest }
 }
 
@@ -43,14 +44,13 @@ describe('hosting with AI sentences', () => {
   describe('a custom topic', () => {
     it('is generated, reviewed by each player, then played by both devices', async () => {
       const { generator, asked } = instantGenerator()
-      const { user, host, guest } = await startWithGenerator(generator)
+      const { user, host, guest } = await startWithGenerator(generator, { customTopic: 'my pet dragon' })
 
-      await user.type(host.ui.getByLabelText('Or enter your own topic'), 'my pet dragon{Enter}')
       await host.ui.findByRole('heading', { name: 'Review your sentences' })
       expect(asked.map((request) => request.language).sort()).toEqual(['de', 'en'])
       expect(asked.every((request) => request.topic.kind === 'custom' && !request.fresh)).toBe(true)
       // Each player reviews the sentences they will read, which are in their own language.
-      expect(host.ui.getByText(german[0])).toBeInTheDocument()
+      expect(await host.ui.findByText(german[0])).toBeInTheDocument()
       expect(host.ui.queryByText(english[0])).not.toBeInTheDocument()
       expect(host.ui.getByText(/written by AI/i)).toBeInTheDocument()
       expect(await guest.ui.findByText(english[0])).toBeInTheDocument()
@@ -64,15 +64,37 @@ describe('hosting with AI sentences', () => {
       expect(host.ui.getByText(/Topic: my pet dragon/)).toBeInTheDocument()
     })
 
+    it('tells the guest sentences are being written from the moment they join, never that the host still has to choose', async () => {
+      const { generator, release } = slowGenerator()
+      const user = userEvent.setup()
+      const network = createMemoryNetwork()
+      const host = await createGame(network, user, generator, { customTopic: 'my pet dragon' })
+      const guest = await startJoining(network, user, host.code)
+
+      // Even a flash of the wrong message counts, so look at every change to the guest's screen.
+      let sawWaiting = false
+      const watch = new MutationObserver(() => {
+        sawWaiting ||= /waiting for the host to choose a topic/i.test(guest.container.textContent ?? '')
+      })
+      watch.observe(guest.container, { subtree: true, childList: true, characterData: true })
+
+      await user.selectOptions(await guest.ui.findByLabelText('I am learning'), 'de')
+      await user.click(guest.ui.getByRole('button', { name: 'Continue' }))
+      await waitFor(() => expect(guest.ui.getByRole('status')).toHaveTextContent(/generating/i))
+      expect(guest.ui.getByText(/Topic: my pet dragon/)).toBeInTheDocument()
+      watch.disconnect()
+      expect(sawWaiting).toBe(false)
+      release()
+    })
+
     it('shows a loading state with Cancel, and Cancel returns to the topics', async () => {
       const { generator, signals, release } = slowGenerator()
-      const { user, host, guest } = await startWithGenerator(generator)
+      const { user, host, guest } = await startWithGenerator(generator, { customTopic: 'my pet dragon' })
 
-      await user.type(host.ui.getByLabelText('Or enter your own topic'), 'my pet dragon{Enter}')
       expect(await host.ui.findByRole('status')).toHaveTextContent(/generating/i)
       expect(host.ui.queryByRole('button', { name: 'Looks good' })).not.toBeInTheDocument()
       // The guest sees that sentences are on the way, but cannot cancel them.
-      expect(await guest.ui.findByRole('status')).toHaveTextContent(/generating/i)
+      await waitFor(() => expect(guest.ui.getByRole('status')).toHaveTextContent(/generating/i))
       expect(guest.ui.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument()
 
       await user.click(host.ui.getByRole('button', { name: 'Cancel' }))
@@ -86,9 +108,8 @@ describe('hosting with AI sentences', () => {
     })
 
     it('explains a failure to both players and lets the host choose another topic', async () => {
-      const { user, host, guest } = await startWithGenerator(failingGenerator('limit-reached'))
+      const { user, host, guest } = await startWithGenerator(failingGenerator('limit-reached'), { customTopic: 'my pet dragon' })
 
-      await user.type(host.ui.getByLabelText('Or enter your own topic'), 'my pet dragon{Enter}')
       expect(await host.ui.findByRole('alert')).toHaveTextContent(/allowance is used up/i)
       expect(host.ui.queryByRole('button', { name: 'Looks good' })).not.toBeInTheDocument()
       expect(await guest.ui.findByRole('alert')).toHaveTextContent(/allowance is used up/i)
@@ -105,7 +126,6 @@ describe('hosting with AI sentences', () => {
       const { generator, asked } = instantGenerator()
       const { user, host, guest } = await startWithGenerator(generator)
 
-      await user.click(host.ui.getByRole('button', { name: 'Greetings and small talk' }))
       await host.ui.findByRole('heading', { name: 'Review your sentences' })
       expect(asked.map((request) => request.language).sort()).toEqual(['de', 'en'])
       expect(asked.every((request) => request.topic.kind === 'preset' && request.topic.id === 'greetings' && !request.fresh)).toBe(true)
@@ -123,7 +143,6 @@ describe('hosting with AI sentences', () => {
       const { generator, asked } = instantGenerator()
       const { user, host, guest } = await startWithGenerator(generator)
 
-      await user.click(host.ui.getByRole('button', { name: 'Greetings and small talk' }))
       await user.click(await host.ui.findByRole('button', { name: 'Regenerate with AI' }))
       await waitFor(() => expect(asked).toHaveLength(4))
       expect(asked.slice(2).every((request) => request.fresh)).toBe(true)
@@ -136,7 +155,6 @@ describe('hosting with AI sentences', () => {
     it('starts the round only when both players have confirmed', async () => {
       const { generator } = instantGenerator()
       const { user, host, guest } = await startWithGenerator(generator)
-      await user.click(host.ui.getByRole('button', { name: 'Greetings and small talk' }))
 
       await user.click(await host.ui.findByRole('button', { name: 'Looks good' }))
       expect(host.ui.getByRole('status')).toHaveTextContent(/waiting for your partner to confirm/i)
@@ -151,7 +169,6 @@ describe('hosting with AI sentences', () => {
     it('lets the guest ask for new sentences, which replaces both players\' sentences and their confirmations', async () => {
       const { generator, asked } = instantGenerator()
       const { user, host, guest } = await startWithGenerator(generator)
-      await user.click(host.ui.getByRole('button', { name: 'Greetings and small talk' }))
       await user.click(await host.ui.findByRole('button', { name: 'Looks good' }))
       await guest.ui.findByRole('status')
 
@@ -169,7 +186,6 @@ describe('hosting with AI sentences', () => {
     it("forgets the guest's confirmation when they leave before the round starts", async () => {
       const { generator } = instantGenerator()
       const { user, host, guest } = await startWithGenerator(generator)
-      await user.click(host.ui.getByRole('button', { name: 'Greetings and small talk' }))
       await user.click(await guest.ui.findByRole('button', { name: 'Looks good' }))
       await host.ui.findByRole('status')
 
@@ -179,9 +195,8 @@ describe('hosting with AI sentences', () => {
     })
 
     it('says why and offers Try again when the AI cannot be reached, and nothing can start', async () => {
-      const { user, host, guest } = await startWithGenerator(failingGenerator('unavailable'))
+      const { host, guest } = await startWithGenerator(failingGenerator('unavailable'))
 
-      await user.click(host.ui.getByRole('button', { name: 'Greetings and small talk' }))
       expect(await host.ui.findByRole('alert')).toHaveTextContent(/can't be reached/i)
       expect(host.ui.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
       expect(host.ui.queryByRole('button', { name: 'Looks good' })).not.toBeInTheDocument()
@@ -192,8 +207,7 @@ describe('hosting with AI sentences', () => {
 
   it('asks the AI again, not for the same sentences, when playing a generated round again', async () => {
     const { generator, asked } = instantGenerator()
-    const { user, host, guest } = await startWithGenerator(generator)
-    await user.type(host.ui.getByLabelText('Or enter your own topic'), 'my pet dragon{Enter}')
+    const { user, host, guest } = await startWithGenerator(generator, { customTopic: 'my pet dragon' })
     await confirmSentences(host, guest, user)
     await host.ui.findByText('Turn 1 of 4')
     for (const device of [host, guest, host, guest]) {
@@ -210,10 +224,34 @@ describe('hosting with AI sentences', () => {
     await guest.ui.findByText('Turn 1 of 4')
   })
 
+  it('never tells the guest the host still has to choose a topic when Play again starts the next round', async () => {
+    const { generator } = instantGenerator()
+    const { user, host, guest } = await startWithGenerator(generator, { customTopic: 'my pet dragon' })
+    await confirmSentences(host, guest, user)
+    await host.ui.findByText('Turn 1 of 4')
+    for (const device of [host, guest, host, guest]) {
+      await user.click(await device.ui.findByRole('button', { name: /next turn|finish round/i }))
+    }
+    await host.ui.findByRole('heading', { name: 'Round complete' })
+    await guest.ui.findByRole('heading', { name: 'Round complete' })
+
+    // Even a flash of the wrong message counts, so look at every change to the guest's screen.
+    let sawWaiting = false
+    const watch = new MutationObserver(() => {
+      sawWaiting ||= /waiting for the host to choose a topic/i.test(guest.container.textContent ?? '')
+    })
+    watch.observe(guest.container, { subtree: true, childList: true, characterData: true })
+
+    await user.click(host.ui.getByRole('button', { name: 'Play again' }))
+    await guest.ui.findByRole('heading', { name: 'Review your sentences' })
+    await guest.ui.findByRole('button', { name: 'Looks good' })
+    watch.disconnect()
+    expect(sawWaiting).toBe(false)
+  })
+
   it('stops generating when the host leaves the game', async () => {
     const { generator, signals } = slowGenerator()
-    const { user, host } = await startWithGenerator(generator)
-    await user.type(host.ui.getByLabelText('Or enter your own topic'), 'my pet dragon{Enter}')
+    const { user, host } = await startWithGenerator(generator, { customTopic: 'my pet dragon' })
     await host.ui.findByRole('status')
 
     await user.click(host.ui.getByRole('button', { name: 'Leave game' }))

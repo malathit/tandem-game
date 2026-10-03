@@ -17,10 +17,24 @@ export type RoomEvent =
   | { type: 'NEXT_TURN'; from: 1 | 2 }
   | { type: 'REVEAL'; from: 1 | 2 }
 
-export const createRoom = (hostLearning: LanguageCode): RoomState => ({
+/**
+ * A new room. With `firstTopic`, it starts out with that topic's sentences on the way (or, if `canGenerate` is false,
+ * already failed), so the guest's first view after joining says what is happening instead of waiting for a choice
+ * the host has already made.
+ */
+export const createRoom = (hostLearning: LanguageCode, firstTopic?: string, canGenerate = true): RoomState => ({
   hostLearning,
   guestLearning: null,
-  review: null,
+  review:
+    firstTopic === undefined
+      ? null
+      : {
+          topic: firstTopic,
+          turns: [],
+          busy: canGenerate,
+          error: canGenerate ? null : 'unavailable',
+          confirmed: [false, false],
+        },
   round: null,
 })
 

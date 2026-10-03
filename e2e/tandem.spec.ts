@@ -18,11 +18,12 @@ const workerAnswered = (page: Page) =>
   page.waitForResponse((response) => WORKER.test(response.url()) && response.request().method() === 'POST' && response.ok())
 
 test('a preset topic is written by the AI, can be regenerated, and is played on both devices', async ({ browser }) => {
-  const game = await startGame(browser)
+  let answered: Promise<unknown> = Promise.resolve()
+  const game = await startGame(browser, {}, (host) => {
+    answered = workerAnswered(host)
+  })
   const { host } = game
 
-  const answered = workerAnswered(host)
-  await host.getByRole('button', { name: TOPIC }).click()
   await answered
   await expect(host.getByText(/Written by AI/)).toBeVisible({ timeout: 30_000 })
   const first = await reviewedTurns(game)
@@ -42,12 +43,12 @@ test('a preset topic is written by the AI, can be regenerated, and is played on 
 })
 
 test('with translations on, both players see each translation after the speaker shows it, or the speaker skips it', async ({ browser }) => {
-  const game = await startGame(browser)
+  let answered: Promise<unknown> = Promise.resolve()
+  const game = await startGame(browser, { translate: true }, (host) => {
+    answered = workerAnswered(host)
+  })
   const { host } = game
 
-  await host.getByLabel('Show the translation after each turn').check()
-  const answered = workerAnswered(host)
-  await host.getByRole('button', { name: TOPIC }).click()
   await answered
   await expect(host.getByText(/Written by AI/)).toBeVisible({ timeout: 30_000 })
 
@@ -66,12 +67,12 @@ test('with translations on, both players see each translation after the speaker 
 })
 
 test('a custom topic is written by the AI and played on both devices', async ({ browser }) => {
-  const game = await startGame(browser)
+  let answered: Promise<unknown> = Promise.resolve()
+  const game = await startGame(browser, { customTopic: 'A day at the beach' }, (host) => {
+    answered = workerAnswered(host)
+  })
   const { host } = game
 
-  const answered = workerAnswered(host)
-  await host.getByLabel('Or enter your own topic').fill('A day at the beach')
-  await host.getByRole('button', { name: 'Use this topic' }).click()
   await answered
   await expect(host.getByText(/Written by AI/)).toBeVisible({ timeout: 30_000 })
 
@@ -83,10 +84,14 @@ test('a custom topic is written by the AI and played on both devices', async ({ 
 })
 
 test('when the AI service cannot be reached, the host is told and nothing starts', async ({ browser }) => {
-  const { host, guest } = await startGame(browser)
-  await host.route(WORKER, (route) => route.abort())
+  // The sentences are asked for as soon as the guest joins, so the Worker has to be unreachable by then.
+  const { host, guest } = await startGame(browser, {}, async (page) => {
+    await page.route(WORKER, (route) => route.abort())
+  })
 
+  // The first attempt used the topic set before the game; after it fails, the host can pick again from the topics.
   for (const pick of [
+    () => Promise.resolve(),
     () => host.getByRole('button', { name: TOPIC }).click(),
     async () => {
       await host.getByLabel('Or enter your own topic').fill('A day at the beach')
@@ -103,4 +108,22 @@ test('when the AI service cannot be reached, the host is told and nothing starts
     await expect(guest.getByText('Waiting for the host to choose a topic…')).toBeVisible({ timeout: 30_000 })
   }
   await expect(guest.getByText('Waiting for the host to choose a topic…')).toBeVisible()
+})
+
+test('a hard round with more sentences is asked for with the host\'s settings and played on both devices', async ({ browser }) => {
+  let asked: unknown
+  const game = await startGame(browser, { count: 3, difficulty: 'hard' }, (host) => {
+    host.on('request', (request) => {
+      if (WORKER.test(request.url()) && request.method() === 'POST') asked = request.postDataJSON()
+    })
+  })
+  await expect.poll(() => asked).toMatchObject({ count: 3, difficulty: 'hard' })
+
+  await expect(game.host.getByText(/Written by AI/)).toBeVisible({ timeout: 30_000 })
+  const turns = await reviewedTurns(game, 3)
+  expect(turns).toHaveLength(6)
+  expectUsableSentences(turns)
+
+  await confirmSentences(game)
+  await playRound(game, turns)
 })

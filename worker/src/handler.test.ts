@@ -194,6 +194,39 @@ describe('generating sentences', () => {
       expect(ai.calls[0].input.messages[1].content).toContain(`<topic>${hint}</topic>`)
     })
 
+    describe('difficulty', () => {
+      const promptFor = async (difficulty?: string) => {
+        kv = new FakeKv() // the test's daily cap is only 5 calls
+        ai.replies = [good]
+        await ask({ ...custom('pets'), ...(difficulty && { difficulty }) })
+        return ai.calls.at(-1)?.input.messages[0].content ?? ''
+      }
+
+      it('asks for short present-tense sentences when easy', async () => {
+        const prompt = await promptFor('easy')
+        expect(prompt).toMatch(/present tense/i)
+        expect(prompt).toMatch(/4 to 7 words/)
+      })
+
+      it('asks for the usual simple sentences when medium, and when no level is given', async () => {
+        const medium = await promptFor('medium')
+        expect(medium).toMatch(/4 to 12 words/)
+        expect(medium).not.toMatch(/subordinate/i)
+        expect(await promptFor()).toBe(medium)
+      })
+
+      it('asks for longer sentences with richer grammar when hard, within what the checks allow', async () => {
+        const prompt = await promptFor('hard')
+        expect(prompt).toMatch(/subordinate clause/i)
+        expect(prompt).toMatch(/10 to 13 words/)
+      })
+
+      it('refuses an unknown level before spending anything', async () => {
+        expect((await ask({ ...custom('pets'), difficulty: 'impossible' })).status).toBe(400)
+        expect(ai.calls).toHaveLength(0)
+      })
+    })
+
     it('has a hint for every preset topic the Worker accepts', async () => {
       for (const { id, hint } of PRESET_TOPICS) {
         kv = new FakeKv() // the test's daily cap is only 5 calls
@@ -206,7 +239,7 @@ describe('generating sentences', () => {
 })
 
 describe('stored sentences for preset topics', () => {
-  const key = 'pool:v3:de:weather:2:plain'
+  const key = 'pool:v4:de:weather:2:medium:plain'
 
   it('stores a freshly generated batch for 30 days', async () => {
     ai.replies = [good]
@@ -257,12 +290,24 @@ describe('stored sentences for preset topics', () => {
     expect((await ask(preset())).body).toEqual(other)
   })
 
+  it('keeps a separate store for each difficulty, so an easy batch is never served for a hard round', async () => {
+    kv.data.set(key, JSON.stringify([good]))
+    ai.replies = [other]
+    const { body } = await ask(preset({ difficulty: 'hard' }))
+    expect(body).toEqual(other)
+    expect(kv.keys('pool:')).toEqual([key, 'pool:v4:de:weather:2:hard:plain'])
+    // Each level is then served from its own store.
+    expect((await ask(preset({ difficulty: 'hard' }))).body).toEqual(other)
+    expect((await ask(preset())).body).toEqual(good)
+    expect(ai.calls).toHaveLength(1)
+  })
+
   it('keeps German and English batches apart', async () => {
     kv.data.set(key, JSON.stringify([good]))
     ai.replies = [{ sentences: ['She can swim very well.', 'They should try harder today.'] }]
     const { body } = await ask(preset({ language: 'en' }))
     expect((body.sentences as string[])[0]).toMatch(/swim/)
-    expect(kv.keys('pool:')).toEqual([key, 'pool:v3:en:weather:2:plain'])
+    expect(kv.keys('pool:')).toEqual([key, 'pool:v4:en:weather:2:medium:plain'])
   })
 
   it('still answers when storing the batch fails', async () => {
@@ -325,7 +370,7 @@ describe('the daily cap on AI calls', () => {
 
   it('falls back to a stored batch for a preset when the cap is reached', async () => {
     kv.data.set(capKey, '5')
-    kv.data.set('pool:v3:de:weather:2:plain', JSON.stringify([other]))
+    kv.data.set('pool:v4:de:weather:2:medium:plain', JSON.stringify([other]))
     expect((await ask(preset({ fresh: true }))).body).toEqual(other)
     expect((await ask(preset({ language: 'en' }))).status).toBe(429)
   })
@@ -427,15 +472,15 @@ describe('rounds of other lengths, with translations', () => {
   })
 
   describe('stored sentences', () => {
-    const plainKey = 'pool:v3:de:weather:2:plain'
-    const translatedKey = 'pool:v3:de:weather:2:translated'
+    const plainKey = 'pool:v4:de:weather:2:medium:plain'
+    const translatedKey = 'pool:v4:de:weather:2:medium:translated'
 
     it('keeps a separate store for each count and for translations', async () => {
       ai.replies = [good, { sentences: five }, translated]
       await ask(preset())
       await ask(preset({ count: 5 }))
       await ask(preset({ translate: true }))
-      expect([...kv.keys('pool:')].sort()).toEqual([plainKey, 'pool:v3:de:weather:5:plain', translatedKey].sort())
+      expect([...kv.keys('pool:')].sort()).toEqual([plainKey, 'pool:v4:de:weather:5:medium:plain', translatedKey].sort())
     })
 
     it('stores translations with their sentences and serves both from the store', async () => {

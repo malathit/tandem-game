@@ -1,16 +1,17 @@
 import { useState } from 'react'
-import type { Language, LanguageCode } from '../content/types'
+import { staticSource } from '../content/staticSource'
+import type { Language } from '../content/types'
 import type { SentenceGenerator } from '../generation/generator'
 import type { Network } from '../online/network'
 import { GuestRoom } from './GuestRoom'
 import { HostRoom } from './HostRoom'
+import { HostSetup, type HostSettings } from './HostSetup'
 import { JoinForm } from './JoinForm'
-import { LanguagePicker } from './LanguagePicker'
 
 type Stage =
   | { kind: 'menu' }
   | { kind: 'host-setup' }
-  | { kind: 'host'; learning: LanguageCode }
+  | { kind: 'host'; settings: HostSettings }
   | { kind: 'join-setup' }
   | { kind: 'guest'; code: string; attempt: number }
 
@@ -50,18 +51,12 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
 
     case 'host-setup':
       return (
-        <section className="card">
-          <h2>Create a game</h2>
-          <LanguagePicker
-            languages={languages}
-            label="I am learning"
-            submitLabel="Create game"
-            onSubmit={(learning) => setStage({ kind: 'host', learning })}
-          />
-          <button type="button" className="secondary" onClick={toMenu}>
-            Back
-          </button>
-        </section>
+        <HostSetup
+          languages={languages}
+          topics={staticSource.getTopics()}
+          onCreate={(settings) => setStage({ kind: 'host', settings })}
+          onBack={toMenu}
+        />
       )
 
     case 'host':
@@ -69,7 +64,8 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
         <HostRoom
           network={network}
           languages={languages}
-          hostLearning={stage.learning}
+          hostLearning={stage.settings.learning}
+          firstRound={stage.settings}
           generator={generator}
           onLeave={toMenu}
         />

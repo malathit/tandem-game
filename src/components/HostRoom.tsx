@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { staticSource } from '../content/staticSource'
 import type { Language, LanguageCode } from '../content/types'
 import type { SentenceGenerator } from '../generation/generator'
-import { DEFAULT_ROUND_OPTIONS, type GenerateTopic } from '../generation/types'
+import type { GenerateTopic, RoundOptions } from '../generation/types'
 import { topicName } from '../game/topicName'
 import { useRoundSetup } from '../game/useRoundSetup'
 import type { Network } from '../online/network'
@@ -24,23 +24,29 @@ interface HostRoomProps {
   network: Network
   languages: Language[]
   hostLearning: LanguageCode
+  /** The topic and options the host set before the game was opened; its sentences are written once the partner is in. */
+  firstRound: { topic: string; options: RoundOptions }
   /** Where the AI's sentences come from; without it there is nothing to play. */
   generator?: SentenceGenerator
   onLeave: () => void
 }
 
 /** The device that created the game: it is Player 1 and runs the game for both. */
-export function HostRoom({ network, languages, hostLearning, generator, onLeave }: HostRoomProps) {
+export function HostRoom({ network, languages, hostLearning, firstRound, generator, onLeave }: HostRoomProps) {
   // The guest can ask for new sentences, but the request is made from here, so the session calls back.
   const guestRegenerate = useRef(() => {})
-  const { status, code, room, partnerConnected, dispatch } = useHostSession(network, hostLearning, () =>
-    guestRegenerate.current(),
+  const { status, code, room, partnerConnected, dispatch } = useHostSession(
+    network,
+    hostLearning,
+    () => guestRegenerate.current(),
+    firstRound.topic,
+    generator !== undefined,
   )
   const { guestLearning, round } = room
   const pair = guestLearning === null ? null : ([room.hostLearning, guestLearning] as const)
   const setup = useRoundSetup(pair, generator)
   const { state: setupState, back: backToTopics } = setup
-  const [options, setOptions] = useState(DEFAULT_ROUND_OPTIONS)
+  const [options, setOptions] = useState(firstRound.options)
   const step = pair === null ? 1 : round === null ? 2 : 3
   const reviewing = setupState.phase === 'preview'
   const roundRunning = round !== null
@@ -49,12 +55,25 @@ export function HostRoom({ network, languages, hostLearning, generator, onLeave 
     guestRegenerate.current = setup.regenerate
   })
 
+  // Once the partner has chosen their language, the sentences can be written: the host already chose what for.
+  const startFirstRound = useRef(() => {})
+  useEffect(() => {
+    startFirstRound.current = () => setup.choose(firstRound.topic, firstRound.options)
+  })
+  const partnerChoseLanguage = pair !== null
+  useEffect(() => {
+    if (partnerChoseLanguage) startFirstRound.current()
+  }, [partnerChoseLanguage])
+
   // The guest reviews their sentences too, so the room carries a copy of the host's review.
+  // Until the first review has begun, the room's starting review (see `useHostSession`) stays.
+  const firstReviewPending = useRef(true)
   useEffect(() => {
     if (setupState.phase === 'preview') {
+      firstReviewPending.current = false
       const { topic, turns, busy, error } = setupState
       dispatch({ type: 'REVIEW_UPDATED', topic: topicText(topic), turns, busy, error })
-    } else {
+    } else if (!firstReviewPending.current) {
       dispatch({ type: 'REVIEW_CLOSED' })
     }
   }, [setupState, dispatch])

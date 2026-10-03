@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Topic } from '../content/types'
-import { MAX_COUNT, MIN_COUNT, type RoundOptions } from '../generation/types'
+import type { RoundOptions } from '../generation/types'
+import { RoundOptionsFields } from './RoundOptionsFields'
 
 interface TopicPickerProps {
   topics: Topic[]
@@ -10,8 +11,6 @@ interface TopicPickerProps {
   /** Called with a preset topic's id, or with the trimmed text of a custom topic. */
   onSelect: (topic: string) => void
 }
-
-const COUNTS = Array.from({ length: MAX_COUNT - MIN_COUNT + 1 }, (_, i) => MIN_COUNT + i)
 
 export function TopicPicker({ topics, options, onOptionsChange, onSelect }: TopicPickerProps) {
   const [custom, setCustom] = useState('')
@@ -27,30 +26,7 @@ export function TopicPicker({ topics, options, onOptionsChange, onSelect }: Topi
   return (
     <section className="card">
       <h2>Choose a topic</h2>
-      <fieldset className="round-options">
-        <legend>Round options</legend>
-        <label>
-          Sentences per player
-          <select
-            value={options.count}
-            onChange={(e) => onOptionsChange({ ...options, count: Number(e.target.value) })}
-          >
-            {COUNTS.map((count) => (
-              <option key={count} value={count}>
-                {count}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={options.translate}
-            onChange={(e) => onOptionsChange({ ...options, translate: e.target.checked })}
-          />
-          Show the translation after each turn
-        </label>
-      </fieldset>
+      <RoundOptionsFields options={options} onChange={onOptionsChange} />
       {topics.length === 0 ? (
         <p>No topics for this language pair yet.</p>
       ) : (

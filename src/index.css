@@ -302,7 +302,8 @@ progress {
 
 /* The host's round settings */
 
-.round-options {
+.round-options,
+.topic-choice {
   display: grid;
   gap: var(--space-2);
   margin: 0;
@@ -311,7 +312,8 @@ progress {
   border-radius: 0.875rem;
 }
 
-.round-options legend {
+.round-options legend,
+.topic-choice legend {
   padding: 0 var(--space-1);
   font-weight: 700;
 }
@@ -474,6 +476,16 @@ button:disabled {
   border-radius: 1rem;
   font-size: 1.1rem;
   font-weight: 700;
+}
+
+.topic-card[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--bg-tint);
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted);
 }
 
 .topic-card:hover:not(:disabled) {

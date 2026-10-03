@@ -1,7 +1,7 @@
 import { expect, type Browser, type Page } from '@playwright/test'
 import { SITE_URL } from '../playwright.config'
 
-/** A preset topic of the game. */
+/** The preset topic the host picks unless a test says otherwise. */
 export const TOPIC = 'Greetings and small talk'
 
 export interface Turn {
@@ -14,14 +14,36 @@ export interface Game {
   guest: Page
 }
 
-/** Two separate browsers' worth of state: a host learning English and a guest learning German, connected. */
-export async function startGame(browser: Browser): Promise<Game> {
+/** What the host sets before the invite link exists. */
+export interface Settings {
+  /** Typed instead of picking the preset `TOPIC`. */
+  customTopic?: string
+  count?: number
+  difficulty?: 'easy' | 'medium' | 'hard'
+  translate?: boolean
+}
+
+/**
+ * Two separate browsers' worth of state: a host learning English and a guest learning German, connected.
+ * The host sets the topic and options first; once the guest has joined, the sentences are asked for at once,
+ * so `ready` runs on the host's page before the guest joins, for anything that must be in place by then.
+ */
+export async function startGame(browser: Browser, settings: Settings = {}, ready?: (host: Page) => Promise<void> | void): Promise<Game> {
   const host = await (await browser.newContext()).newPage()
   await host.goto(SITE_URL)
   await host.getByRole('button', { name: 'Create a game' }).click()
   await host.getByLabel('I am learning').selectOption('en')
+  if (settings.count !== undefined) await host.getByLabel('Sentences per player').selectOption(String(settings.count))
+  if (settings.difficulty !== undefined) await host.getByLabel('Difficulty').selectOption(settings.difficulty)
+  if (settings.translate) await host.getByLabel('Show the translation after each turn').check()
+  if (settings.customTopic !== undefined) {
+    await host.getByLabel('Or enter your own topic').fill(settings.customTopic)
+  } else {
+    await host.getByRole('button', { name: TOPIC }).click()
+  }
   await host.getByRole('button', { name: 'Create game' }).click()
   const code = (await host.getByText(/^[A-Z2-9]{5}$/).textContent()) ?? ''
+  await ready?.(host)
 
   const guest = await (await browser.newContext()).newPage()
   await guest.goto(`${SITE_URL}?join=${code}`)
@@ -32,8 +54,8 @@ export async function startGame(browser: Browser): Promise<Game> {
   await guest.getByLabel('I am learning').selectOption('de')
   await guest.getByRole('button', { name: 'Continue' }).click()
 
-  // The host only sees the topics once the guest's choice has travelled over the real connection.
-  await expect(host.getByRole('button', { name: TOPIC })).toBeVisible({ timeout: 30_000 })
+  // The host's review only starts once the guest's choice has travelled over the real connection.
+  await expect(host.getByRole('heading', { name: 'Review your sentences' })).toBeVisible({ timeout: 30_000 })
   return { host, guest }
 }
 

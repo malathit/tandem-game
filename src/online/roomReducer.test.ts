@@ -16,6 +16,29 @@ describe('createRoom', () => {
   })
 })
 
+describe('a room that already knows its first topic', () => {
+  it('starts with that topic\'s sentences on the way, so the joining guest never sees an empty room', () => {
+    const room = createRoom('en', 'weather')
+    expect(room.review).toEqual({ topic: 'weather', turns: [], busy: true, error: null, confirmed: [false, false] })
+    expect(roomReducer(room, { type: 'GUEST_HELLO', learning: 'de' }).review).toEqual(room.review)
+  })
+
+  it('starts out as a failed review when the host cannot generate sentences at all', () => {
+    expect(createRoom('en', 'weather', false).review).toEqual({
+      topic: 'weather',
+      turns: [],
+      busy: false,
+      error: 'unavailable',
+      confirmed: [false, false],
+    })
+  })
+
+  it('lets the real review replace it, and clears it like any other', () => {
+    const joinedRoom = roomReducer(createRoom('en', 'weather'), { type: 'GUEST_HELLO', learning: 'de' })
+    expect(roomReducer(joinedRoom, { type: 'REVIEW_CLOSED' }).review).toBeNull()
+  })
+})
+
 describe('GUEST_HELLO', () => {
   it('records the language the guest is learning', () => {
     expect(joined.guestLearning).toBe('de')

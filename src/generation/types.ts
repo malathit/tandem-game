@@ -7,15 +7,23 @@ export const DEFAULT_COUNT = 2
 
 export type GenerateTopic = { kind: 'preset'; id: string } | { kind: 'custom'; text: string }
 
+/** How demanding the sentences are: short and plain, today's style, or longer with richer grammar. */
+export const DIFFICULTIES = ['easy', 'medium', 'hard'] as const
+export type Difficulty = (typeof DIFFICULTIES)[number]
+export const DEFAULT_DIFFICULTY: Difficulty = 'medium'
+
+export const isDifficulty = (value: unknown): value is Difficulty => DIFFICULTIES.some((level) => level === value)
+
 /** What the host chooses for a round. */
 export interface RoundOptions {
   /** How many sentences each player reads, from `MIN_COUNT` to `MAX_COUNT`. */
   count: number
   /** Also write each sentence's translation into the other language. */
   translate: boolean
+  difficulty: Difficulty
 }
 
-export const DEFAULT_ROUND_OPTIONS: RoundOptions = { count: DEFAULT_COUNT, translate: false }
+export const DEFAULT_ROUND_OPTIONS: RoundOptions = { count: DEFAULT_COUNT, translate: false, difficulty: DEFAULT_DIFFICULTY }
 
 export interface GenerateRequest extends RoundOptions {
   /** The language the sentences are written in. */

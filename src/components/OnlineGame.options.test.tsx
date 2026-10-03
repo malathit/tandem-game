@@ -1,36 +1,53 @@
 import { waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { confirmSentences, createGame, joinGame, sentenceOn } from '../test/devices'
+import { confirmSentences, createGame, joinGame, reviewing, sentenceOn, type HostChoices } from '../test/devices'
 import { english, german, instantGenerator } from '../test/generators'
 import { createMemoryNetwork } from '../test/memoryNetwork'
 
-async function start() {
+/** The host chooses the round before the link exists; the sentences are asked for once the guest joins. */
+async function start(choices: HostChoices = {}) {
   const user = userEvent.setup()
   const network = createMemoryNetwork()
   const { generator, asked } = instantGenerator()
-  const host = await createGame(network, user, generator)
+  const host = await createGame(network, user, generator, choices)
   const guest = await joinGame(network, user, host.code)
-  await host.ui.findByRole('button', { name: 'Greetings and small talk' })
+  await reviewing(host)
   return { user, host, guest, asked }
 }
 
 describe('round options', () => {
-  it('plays two sentences each, without translations, unless the host chooses otherwise', async () => {
+  it.each(['easy', 'medium', 'hard'] as const)('asks for %s sentences for both players when the host chose that', async (difficulty) => {
+    const { asked } = await start({ difficulty })
+    expect(asked.map((request) => request.difficulty)).toEqual([difficulty, difficulty])
+  })
+
+  it('keeps the difficulty for Play again, and lets the host change it with Change topic', async () => {
+    const { user, host, guest, asked } = await start({ difficulty: 'hard' })
+    await confirmSentences(host, guest, user)
+    await host.ui.findByText('Turn 1 of 4')
+
+    await user.click(host.ui.getByRole('button', { name: 'Change topic' }))
+    // The in-room picker still has the host's earlier choices, and they can change them.
+    expect(await host.ui.findByLabelText('Difficulty')).toHaveValue('hard')
+    asked.length = 0
+    await user.selectOptions(host.ui.getByLabelText('Difficulty'), 'easy')
+    await user.click(host.ui.getByRole('button', { name: 'Weather' }))
+    await reviewing(host)
+    await waitFor(() => expect(asked).toHaveLength(2))
+    expect(asked.every((request) => request.difficulty === 'easy' && request.topic.kind === 'preset')).toBe(true)
+  })
+
+  it('plays two sentences each, at medium difficulty, without translations, unless the host chooses otherwise', async () => {
     const { user, host, guest, asked } = await start()
-    await user.click(host.ui.getByRole('button', { name: 'Greetings and small talk' }))
-    await host.ui.findByRole('heading', { name: 'Review your sentences' })
-    expect(asked.every((request) => request.count === 2 && !request.translate)).toBe(true)
+    expect(asked.every((request) => request.count === 2 && !request.translate && request.difficulty === 'medium')).toBe(true)
     await confirmSentences(host, guest, user)
     await host.ui.findByText('Turn 1 of 4')
     expect(host.ui.queryByRole('button', { name: 'Show translation' })).not.toBeInTheDocument()
   })
 
   it('plays as many turns as the host chose', async () => {
-    const { user, host, guest, asked } = await start()
-    await user.selectOptions(host.ui.getByLabelText('Sentences per player'), '5')
-    await user.click(host.ui.getByRole('button', { name: 'Greetings and small talk' }))
-    await host.ui.findByRole('heading', { name: 'Review your sentences' })
+    const { user, host, guest, asked } = await start({ count: 5 })
     expect(asked.every((request) => request.count === 5)).toBe(true)
     // Each player reviews only their own five.
     await waitFor(() => expect(host.container.querySelectorAll('.preview-list li')).toHaveLength(5))
@@ -41,13 +58,7 @@ describe('round options', () => {
   })
 
   describe('with translations', () => {
-    async function startTranslated() {
-      const game = await start()
-      await game.user.click(game.host.ui.getByLabelText('Show the translation after each turn'))
-      await game.user.click(game.host.ui.getByRole('button', { name: 'Greetings and small talk' }))
-      await game.host.ui.findByRole('heading', { name: 'Review your sentences' })
-      return game
-    }
+    const startTranslated = () => start({ translate: true })
 
     it('keeps the translations out of the review, which is only about the sentences each player reads', async () => {
       const { host, guest, asked } = await startTranslated()

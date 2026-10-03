@@ -44,7 +44,7 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
       </p>
       <progress value={game.index + 1} max={game.turns.length} aria-hidden="true" />
       <h2>
-        Player {turn.player}, translate into {learning}:
+        {canAct ? 'Your turn' : "Your partner's turn"}: translate into {learning}
       </h2>
       <p className="sentence">{turn.sentence.text}</p>
       {game.revealed && (
@@ -66,7 +66,7 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
           </button>
         </>
       ) : (
-        <p role="status">Waiting for Player {turn.player} to finish their turn…</p>
+        <p role="status">Waiting for your partner to finish their turn…</p>
       )}
     </section>
   )

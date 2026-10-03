@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { generatorFromUrl } from './config'
 import { generateForPair } from './generator'
+import type { RoundOptions } from './types'
 
 // An opt-in check against a real Worker, so it never runs in CI. Start one with
 //   cd worker && npx wrangler@4 dev --port 8787
@@ -25,6 +26,7 @@ describe.skipIf(!url)('the real Worker', () => {
       fresh: false,
       count: 2,
       translate: false,
+      difficulty: 'medium',
     })
     console.log('preset (de):', answer)
     expect(answer.sentences).toHaveLength(2)
@@ -37,6 +39,7 @@ describe.skipIf(!url)('the real Worker', () => {
       fresh: true,
       count: 3,
       translate: true,
+      difficulty: 'medium',
     })
     console.log('translated (de):', answer)
     expect(answer.sentences).toHaveLength(3)
@@ -44,7 +47,7 @@ describe.skipIf(!url)('the real Worker', () => {
   }, 30_000)
 
   it('generates both languages of a round for a custom topic', async () => {
-    const options = { count: 2, translate: false }
+    const options: RoundOptions = { count: 2, translate: false, difficulty: 'medium' }
     const result = await generateForPair(live(), ['en', 'de'], { kind: 'custom', text: 'a rainy day at the beach' }, false, options)
     console.log('custom round:', result)
     expect(result.de).toHaveLength(2)
@@ -53,7 +56,7 @@ describe.skipIf(!url)('the real Worker', () => {
 
   it('refuses an invalid request without spending the AI', async () => {
     await expect(
-      live().generate({ language: 'de', topic: { kind: 'custom', text: 'x'.repeat(61) }, fresh: false, count: 2, translate: false }),
+      live().generate({ language: 'de', topic: { kind: 'custom', text: 'x'.repeat(61) }, fresh: false, count: 2, translate: false, difficulty: 'medium' }),
     ).rejects.toMatchObject({ kind: 'invalid' })
   }, 30_000)
 })

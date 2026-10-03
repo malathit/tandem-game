@@ -1,10 +1,17 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
 import { createHttpGenerator, generateForPair, GenerationError, type SentenceGenerator } from './generator'
-import type { GeneratedSentences, GenerateRequest, GenerationErrorKind } from './types'
+import type { GeneratedSentences, GenerateRequest, GenerationErrorKind, RoundOptions } from './types'
 
 const URL = 'https://worker.example/'
-const request: GenerateRequest = { language: 'de', topic: { kind: 'preset', id: 'weather' }, fresh: false, count: 2, translate: false }
+const request: GenerateRequest = {
+  language: 'de',
+  topic: { kind: 'preset', id: 'weather' },
+  fresh: false,
+  count: 2,
+  translate: false,
+  difficulty: 'medium',
+}
 const sentences = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.']
 
 type FetchFn = typeof fetch
@@ -172,7 +179,7 @@ describe('translated answers from the Worker', () => {
   it('sends the options to the Worker', async () => {
     const fetchFn = vi.fn((() => answer({ sentences, translations })) as FetchFn)
     await createHttpGenerator(URL, { fetch: fetchFn }).generate({ ...translated, count: 2 })
-    expect(JSON.parse(String(fetchFn.mock.calls[0][1]?.body))).toMatchObject({ count: 2, translate: true })
+    expect(JSON.parse(String(fetchFn.mock.calls[0][1]?.body))).toMatchObject({ count: 2, translate: true, difficulty: 'medium' })
   })
 })
 
@@ -181,7 +188,7 @@ describe('generateForPair', () => {
   const german = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.']
   const english = ['She can swim very well.', 'They should try harder today.']
   const topic = { kind: 'custom', text: 'my pet dragon' } as const
-  const options = { count: 2, translate: false }
+  const options: RoundOptions = { count: 2, translate: false, difficulty: 'medium' }
 
   const generatorOf = (handler: (request: GenerateRequest, signal?: AbortSignal) => Promise<GeneratedSentences>): SentenceGenerator => ({
     generate: handler,
@@ -208,7 +215,7 @@ describe('generateForPair', () => {
       const sentences = req.language === 'de' ? german : english
       return { sentences, translations: sentences.map((text) => `${text} (translated)`) }
     })
-    const result = await generateForPair(generator, pair, topic, false, { count: 2, translate: true })
+    const result = await generateForPair(generator, pair, topic, false, { count: 2, translate: true, difficulty: 'medium' })
     expect(asked.every((req) => req.count === 2 && req.translate)).toBe(true)
     expect(result.de?.[0]).toEqual({ id: 'ai-de-1', text: german[0], translation: `${german[0]} (translated)` })
   })

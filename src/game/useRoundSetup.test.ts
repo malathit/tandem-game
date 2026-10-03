@@ -106,26 +106,26 @@ describe('useRoundSetup', () => {
   describe('round options', () => {
     it('asks for the chosen number of sentences and translations, and builds that many turns', async () => {
       const { result, pending } = start()
-      act(() => result.current.choose(preset, { count: 1, translate: true }))
+      act(() => result.current.choose(preset, { count: 1, translate: true, difficulty: 'medium' }))
       expect(pending.map((p) => p.request)).toEqual(
-        expect.arrayContaining([expect.objectContaining({ count: 1, translate: true })]),
+        expect.arrayContaining([expect.objectContaining({ count: 1, translate: true, difficulty: 'medium' })]),
       )
       act(() => {
         for (const p of pending.splice(0)) p.resolve({ sentences: [(p.request.language === 'de' ? german : english)[0]] })
       })
       await waitFor(() => expect(result.current.state).toMatchObject({ busy: false }))
-      expect(result.current.state).toMatchObject({ options: { count: 1, translate: true } })
+      expect(result.current.state).toMatchObject({ options: { count: 1, translate: true, difficulty: 'medium' } })
       expect(result.current.state.phase === 'preview' && result.current.state.turns).toHaveLength(2)
     })
 
-    it('keeps the options when it asks for new sentences', async () => {
+    it('keeps the options, difficulty included, when it asks for new sentences', async () => {
       const { result, pending } = start()
-      act(() => result.current.choose(preset, { count: 3, translate: false }))
+      act(() => result.current.choose(preset, { count: 3, translate: false, difficulty: 'hard' }))
       act(() => pending.splice(0).forEach((p) => p.reject(new GenerationError('unavailable'))))
       await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, error: 'unavailable' }))
       act(() => result.current.regenerate())
       expect(pending.map((p) => p.request)).toEqual(
-        expect.arrayContaining([expect.objectContaining({ count: 3, fresh: true })]),
+        expect.arrayContaining([expect.objectContaining({ count: 3, difficulty: 'hard', fresh: true })]),
       )
     })
   })
@@ -139,8 +139,8 @@ describe('useRoundSetup', () => {
       expect(result.current.state).toMatchObject({ phase: 'preview', busy: true, turns: before })
       expect(pending.map((p) => p.request)).toEqual(
         expect.arrayContaining([
-          { language: 'de', topic: { kind: 'preset', id: preset }, fresh: true, count: 2, translate: false },
-          { language: 'en', topic: { kind: 'preset', id: preset }, fresh: true, count: 2, translate: false },
+          { language: 'de', topic: { kind: 'preset', id: preset }, fresh: true, count: 2, translate: false, difficulty: 'medium' },
+          { language: 'en', topic: { kind: 'preset', id: preset }, fresh: true, count: 2, translate: false, difficulty: 'medium' },
         ]),
       )
 

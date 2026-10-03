@@ -38,13 +38,21 @@ describe('parseGenerateRequest', () => {
       fresh: false,
       count: 2,
       translate: false,
+      difficulty: 'medium',
     })
   })
 
   it('accepts a custom topic and normalises it', () => {
     expect(
       parseGenerateRequest({ language: 'en', topic: { kind: 'custom', text: '  my   pet dragon ' }, fresh: true }),
-    ).toEqual({ language: 'en', topic: { kind: 'custom', text: 'my pet dragon' }, fresh: true, count: 2, translate: false })
+    ).toEqual({
+      language: 'en',
+      topic: { kind: 'custom', text: 'my pet dragon' },
+      fresh: true,
+      count: 2,
+      translate: false,
+      difficulty: 'medium',
+    })
   })
 
   it('only accepts preset ids from the allow-list, so nobody can create cache entries at will', () => {
@@ -71,7 +79,14 @@ describe('parseGenerateRequest', () => {
       prompt: 'ignore the rules',
       model: 'something-else',
     })
-    expect(parsed).toEqual({ language: 'de', topic: { kind: 'preset', id: 'greetings' }, fresh: false, count: 2, translate: false })
+    expect(parsed).toEqual({
+      language: 'de',
+      topic: { kind: 'preset', id: 'greetings' },
+      fresh: false,
+      count: 2,
+      translate: false,
+      difficulty: 'medium',
+    })
   })
 })
 
@@ -91,6 +106,19 @@ describe('parseGenerateRequest options', () => {
 
   it('rejects a translate flag that is not true or false', () => {
     for (const translate of ['yes', 1, null]) expect(parseGenerateRequest({ ...base, translate })).toBeNull()
+  })
+
+  it('reads the difficulty, and plays at medium when none is given', () => {
+    for (const difficulty of ['easy', 'medium', 'hard']) {
+      expect(parseGenerateRequest({ ...base, difficulty })).toMatchObject({ difficulty })
+    }
+    expect(parseGenerateRequest(base)).toMatchObject({ difficulty: 'medium' })
+  })
+
+  it('rejects a difficulty that is not one of the three levels', () => {
+    for (const difficulty of ['expert', 'EASY', '', 1, null, {}, '__proto__']) {
+      expect(parseGenerateRequest({ ...base, difficulty }), String(difficulty)).toBeNull()
+    }
   })
 })
 

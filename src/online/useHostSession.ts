@@ -26,8 +26,12 @@ export function useHostSession(
   hostLearning: LanguageCode,
   /** The guest asked for new sentences; only the host's device can call the AI. */
   onGuestRegenerate: () => void = ignore,
+  /** The topic whose sentences are written as soon as the guest has joined, if any. */
+  firstTopic?: string,
+  /** False in a build without AI: the guest is then told the sentences cannot be written. */
+  canGenerate = true,
 ): HostSession {
-  const [room, dispatch] = useReducer(roomReducer, hostLearning, createRoom)
+  const [room, dispatch] = useReducer(roomReducer, undefined, () => createRoom(hostLearning, firstTopic, canGenerate))
   const [status, setStatus] = useState<HostSession['status']>('opening')
   const [code, setCode] = useState<string | null>(null)
   const [partnerConnected, setPartnerConnected] = useState(false)
