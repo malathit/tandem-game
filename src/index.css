@@ -249,6 +249,37 @@ progress {
   font-size: 2.75rem;
 }
 
+/* Review of a round's sentences */
+
+.preview-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preview-list li {
+  padding: var(--space-2) var(--space-3);
+  border-left: 6px solid var(--player);
+  border-radius: 0.75rem;
+  background: var(--player-tint);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.preview-who {
+  display: block;
+  color: var(--player);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.preview-source {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
 /* Status messages */
 
 .waiting {

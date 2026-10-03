@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Language, LanguageCode } from '../content/types'
+import type { SentenceGenerator } from '../generation/generator'
 import type { Network } from '../online/network'
 import { GuestRoom } from './GuestRoom'
 import { HostRoom } from './HostRoom'
@@ -18,10 +19,12 @@ interface OnlineGameProps {
   languages: Language[]
   /** A valid game code from an invite link: join that game straight away. */
   initialCode?: string
+  /** Where AI sentences come from; leave out to play only the hand-written topics. */
+  generator?: SentenceGenerator
 }
 
 /** Walks the players from creating or joining a game, through to playing it. */
-export function OnlineGame({ network, languages, initialCode }: OnlineGameProps) {
+export function OnlineGame({ network, languages, initialCode, generator }: OnlineGameProps) {
   const [stage, setStage] = useState<Stage>(
     initialCode ? { kind: 'guest', code: initialCode, attempt: 1 } : { kind: 'menu' },
   )
@@ -62,7 +65,15 @@ export function OnlineGame({ network, languages, initialCode }: OnlineGameProps)
       )
 
     case 'host':
-      return <HostRoom network={network} languages={languages} hostLearning={stage.learning} onLeave={toMenu} />
+      return (
+        <HostRoom
+          network={network}
+          languages={languages}
+          hostLearning={stage.learning}
+          generator={generator}
+          onLeave={toMenu}
+        />
+      )
 
     case 'join-setup':
       return (

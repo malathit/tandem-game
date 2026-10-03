@@ -2,51 +2,9 @@ import { render, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { staticSource } from '../content/staticSource'
-import type { Language } from '../content/types'
-import { createMemoryNetwork, type MemoryNetwork } from '../test/memoryNetwork'
+import { createGame, currentStep, joinGame, languages, open, sentenceOn, startJoining } from '../test/devices'
+import { createMemoryNetwork } from '../test/memoryNetwork'
 import { OnlineGame } from './OnlineGame'
-
-const languages: Language[] = staticSource.getLanguages()
-
-type User = ReturnType<typeof userEvent.setup>
-
-function open(network: MemoryNetwork) {
-  const view = render(<OnlineGame network={network} languages={languages} />)
-  return { ...view, ui: within(view.container) }
-}
-
-/** The label of the step the screen says we are on. */
-const currentStep = (device: { container: HTMLElement }) =>
-  device.container.querySelector('[aria-current="step"]')?.textContent
-
-/** A device that creates a game, learning English. Resolves once the code is shown. */
-async function createGame(network: MemoryNetwork, user: User) {
-  const device = open(network)
-  await user.click(device.ui.getByRole('button', { name: 'Create a game' }))
-  await user.selectOptions(device.ui.getByLabelText('I am learning'), 'en')
-  await user.click(device.ui.getByRole('button', { name: 'Create game' }))
-  const code = (await device.ui.findByText(/^[A-Z2-9]{5}$/)).textContent ?? ''
-  return { ...device, code }
-}
-
-async function startJoining(network: MemoryNetwork, user: User, code: string) {
-  const device = open(network)
-  await user.click(device.ui.getByRole('button', { name: 'Join a game' }))
-  await user.type(device.ui.getByLabelText('Game code'), code)
-  await user.click(device.ui.getByRole('button', { name: 'Join game' }))
-  return device
-}
-
-/** A device that joins and picks German, ending on the "waiting for the host" screen. */
-async function joinGame(network: MemoryNetwork, user: User, code: string) {
-  const device = await startJoining(network, user, code)
-  await user.selectOptions(await device.ui.findByLabelText('I am learning'), 'de')
-  await user.click(device.ui.getByRole('button', { name: 'Continue' }))
-  return device
-}
-
-const sentenceOn = (device: { container: HTMLElement }) =>
-  device.container.querySelector('.sentence')?.textContent
 
 describe('OnlineGame menu', () => {
   it('offers to create or join a game', () => {
