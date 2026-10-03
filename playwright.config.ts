@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test'
 
 /** The deployed site; override with E2E_URL to aim the tests elsewhere. */
-export const SITE_URL = process.env.E2E_URL ?? 'https://www.malathi.dev/tandem-game/'
+export const SITE_URL = process.env.E2E_URL ?? 'https://tandem-game.github.io/'
 
 export default defineConfig({
   testDir: 'e2e',

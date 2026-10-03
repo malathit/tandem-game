@@ -2,7 +2,7 @@
 
 A language-learning game for one or two people built with React, TypeScript and Vite. In the two-player game each player is a native speaker of the language the other is learning. You take turns: the game shows a sentence in your own language, you translate it aloud into the language you are learning, and your partner judges it. The app itself does no scoring or judging.
 
-Live site: https://www.malathi.dev/tandem-game/
+Live site: https://tandem-game.github.io/
 
 ## How to play
 
@@ -25,7 +25,7 @@ Be on a call or in the same room: translations are spoken, not typed.
 
 ```sh
 npm install
-npm run dev      # dev server with hot reload (http://localhost:5173/tandem-game/)
+npm run dev      # dev server with hot reload (http://localhost:5173/)
 npm run build    # type-check and bundle into dist/
 npm run preview  # serve the production build locally
 npm run lint

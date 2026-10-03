@@ -3,14 +3,14 @@ import { buildInviteUrl, readJoinCode } from './inviteLink'
 
 describe('buildInviteUrl', () => {
   it('adds the code to the page address', () => {
-    expect(buildInviteUrl('K7QXZ', 'https://www.malathi.dev/tandem-game/')).toBe(
-      'https://www.malathi.dev/tandem-game/?join=K7QXZ',
+    expect(buildInviteUrl('K7QXZ', 'https://tandem-game.github.io/')).toBe(
+      'https://tandem-game.github.io/?join=K7QXZ',
     )
   })
 
   it('drops any other query and the hash so the link only carries the code', () => {
-    expect(buildInviteUrl('K7QXZ', 'http://localhost:5173/tandem-game/?join=OLD22&x=1#top')).toBe(
-      'http://localhost:5173/tandem-game/?join=K7QXZ',
+    expect(buildInviteUrl('K7QXZ', 'http://localhost:5173/?join=OLD22&x=1#top')).toBe(
+      'http://localhost:5173/?join=K7QXZ',
     )
   })
 })

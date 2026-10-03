@@ -3,8 +3,8 @@ import { configDefaults, defineConfig } from 'vitest/config'
 
 // https://vite.dev/config/
 export default defineConfig({
-  // GitHub Pages serves project sites from /<repo-name>/
-  base: '/tandem-game/',
+  // The repo is the organisation's user site (tandem-game.github.io), so it is served from the root
+  base: '/',
   plugins: [react()],
   test: {
     environment: 'jsdom',

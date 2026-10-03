@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { InviteLink } from './InviteLink'
 
-const url = 'https://www.malathi.dev/tandem-game/?join=K7QXZ'
+const url = 'https://tandem-game.github.io/?join=K7QXZ'
 
 function setup() {
   const user = userEvent.setup() // also installs a clipboard stand-in
