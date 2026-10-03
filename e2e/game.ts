@@ -31,6 +31,7 @@ export interface Settings {
 export async function startGame(browser: Browser, settings: Settings = {}, ready?: (host: Page) => Promise<void> | void): Promise<Game> {
   const host = await (await browser.newContext()).newPage()
   await host.goto(SITE_URL)
+  await host.getByRole('button', { name: '2 players' }).click()
   await host.getByRole('button', { name: 'Create a game' }).click()
   await host.getByLabel('I speak').selectOption('de')
   if (settings.count !== undefined) await host.getByLabel('Sentences per player').selectOption(String(settings.count))

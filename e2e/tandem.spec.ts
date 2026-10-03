@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { parseModelOutput } from '../src/generation/validate'
 import { confirmSentences, playRound, reviewedTurns, startGame, TOPIC, type Turn } from './game'
+import { SITE_URL } from '../playwright.config'
 
 // Which requests go to the Worker; E2E_WORKER_PATTERN aims this at a local Worker.
 const WORKER = new RegExp(process.env.E2E_WORKER_PATTERN ?? 'workers\\.dev')
@@ -126,4 +127,34 @@ test('a hard round with more sentences is asked for with the host\'s settings an
 
   await confirmSentences(game)
   await playRound(game, turns)
+})
+
+test('playing alone: the AI writes German sentences, each shows its English translation, and the round can be played again', async ({ page }) => {
+  await page.goto(SITE_URL)
+  await page.getByRole('button', { name: '1 player' }).click()
+  await page.getByLabel('I speak').selectOption('de')
+  await page.getByLabel('Sentences').selectOption('2')
+  await page.getByRole('button', { name: TOPIC }).click()
+  const answered = workerAnswered(page)
+  await page.getByRole('button', { name: 'Start' }).click()
+
+  await answered
+  await expect(page.getByText(/Written by AI/)).toBeVisible({ timeout: 30_000 })
+  await page.getByRole('button', { name: 'Looks good' }).click()
+
+  for (const turn of [1, 2]) {
+    await expect(page.getByText(`Turn ${turn} of 2`)).toBeVisible()
+    const sentence = (await page.locator('.sentence').textContent()) ?? ''
+    expect(parseModelOutput({ sentences: [sentence] }, 'de', 1), `sentence: ${sentence}`).toMatchObject({ ok: true })
+
+    await page.getByRole('button', { name: 'Show translation' }).click()
+    const translation = (await page.locator('.translation').evaluate((el) => el.lastChild?.textContent)) ?? ''
+    expect(parseModelOutput({ sentences: [translation] }, 'en', 1), `translation: ${translation}`).toMatchObject({ ok: true })
+
+    await page.getByRole('button', { name: turn === 2 ? 'Finish round' : 'Next turn' }).click()
+  }
+
+  await expect(page.getByRole('heading', { name: 'Round complete' })).toBeVisible()
+  await page.getByRole('button', { name: 'Play again' }).click()
+  await expect(page.getByRole('heading', { name: 'Review your sentences' })).toBeVisible()
 })

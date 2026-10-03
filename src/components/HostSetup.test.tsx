@@ -123,3 +123,36 @@ describe('HostSetup', () => {
     expect(onBack).toHaveBeenCalledOnce()
   })
 })
+
+describe('HostSetup for one player', () => {
+  function setupSolo() {
+    const onCreate = vi.fn()
+    const user = userEvent.setup()
+    render(<HostSetup languages={languages} topics={topics} onCreate={onCreate} onBack={vi.fn()} solo />)
+    return { user, onCreate }
+  }
+
+  it('is about practising alone: no game is created, and there is no translation switch', () => {
+    setupSolo()
+    expect(screen.getByRole('heading', { name: 'Practise on your own' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Create game' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Show the translation after each turn')).not.toBeInTheDocument()
+    expect(screen.getByText('Choose a topic to start.')).toBeInTheDocument()
+  })
+
+  it('always asks for translations, whatever the options', async () => {
+    const { user, onCreate } = setupSolo()
+    await user.selectOptions(screen.getByLabelText('I speak'), 'de')
+    await user.selectOptions(screen.getByLabelText('Sentences'), '4')
+    await user.selectOptions(screen.getByLabelText('Difficulty'), 'hard')
+    await user.click(screen.getByRole('button', { name: 'Weather' }))
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+
+    expect(onCreate).toHaveBeenCalledWith({
+      knows: 'de',
+      topic: 'weather',
+      options: { count: 4, translate: true, difficulty: 'hard' },
+    })
+  })
+})

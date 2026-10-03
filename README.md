@@ -1,10 +1,18 @@
 # Tandem Game
 
-A language-learning game for two people built with React, TypeScript and Vite. Each player is a native speaker of the language the other is learning. You take turns: the game shows a sentence in your own language, you translate it aloud into the language you are learning, and your partner judges it. The app itself does no scoring or judging.
+A language-learning game for one or two people built with React, TypeScript and Vite. In the two-player game each player is a native speaker of the language the other is learning. You take turns: the game shows a sentence in your own language, you translate it aloud into the language you are learning, and your partner judges it. The app itself does no scoring or judging.
 
 Live site: https://www.malathi.dev/tandem-game/
 
 ## How to play
+
+Start by choosing **1 player** or **2 players**.
+
+### On your own (1 player)
+
+Pick the language you speak, the number of sentences (1 to 5), the difficulty and a topic (one of ten everyday ones, or your own). An AI writes the sentences in your language, with their translations. Review them (ask for new ones if something looks off) and tap "Looks good". For each sentence, say it aloud in the language you are learning, tap "Show translation" to check yourself, then "Next turn". Nothing is sent to another device, and there is no scoring.
+
+### With a partner (2 players)
 
 1. One player chooses "Create a game", picks the language they speak, and sets up the round: a topic (one of ten everyday ones, or their own), how many sentences each player gets (1 to 5), the difficulty, and whether translations are shown after each turn.
 2. They send their partner the invite link (or the 5-character code). The partner joins and picks the language they speak; each of you then learns the other's language.

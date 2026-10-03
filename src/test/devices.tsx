@@ -57,6 +57,7 @@ export async function createGame(
   choices: HostChoices = {},
 ) {
   const device = open(network, generator ?? undefined)
+  await user.click(device.ui.getByRole('button', { name: '2 players' }))
   await user.click(device.ui.getByRole('button', { name: 'Create a game' }))
   await user.selectOptions(device.ui.getByLabelText('I speak'), 'de')
   await chooseRound(device, user, choices)
@@ -67,6 +68,7 @@ export async function createGame(
 
 export async function startJoining(network: MemoryNetwork, user: User, code: string) {
   const device = open(network)
+  await user.click(device.ui.getByRole('button', { name: '2 players' }))
   await user.click(device.ui.getByRole('button', { name: 'Join a game' }))
   await user.type(device.ui.getByLabelText('Game code'), code)
   await user.click(device.ui.getByRole('button', { name: 'Join game' }))

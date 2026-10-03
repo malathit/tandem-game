@@ -1,6 +1,6 @@
 import { render, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   chooseRound,
   confirmSentences,
@@ -14,16 +14,28 @@ import {
   startJoining,
   startRound,
 } from '../test/devices'
-import { english, german } from '../test/generators'
+import { english, german, instantGenerator } from '../test/generators'
 import { createMemoryNetwork } from '../test/memoryNetwork'
 import { OnlineGame } from './OnlineGame'
 
 describe('OnlineGame menu', () => {
-  it('offers to create or join a game', () => {
+  it('first asks whether to play alone or with a partner', () => {
     const { ui } = open(createMemoryNetwork())
+    expect(ui.getByRole('button', { name: '1 player' })).toBeInTheDocument()
+    expect(ui.getByRole('button', { name: '2 players' })).toBeInTheDocument()
+    expect(ui.queryByRole('button', { name: 'Create a game' })).not.toBeInTheDocument()
+    expect(ui.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument()
+  })
+
+  it('offers to create or join a game once two players are chosen, and can go back', async () => {
+    const user = userEvent.setup()
+    const { ui } = open(createMemoryNetwork())
+    await user.click(ui.getByRole('button', { name: '2 players' }))
     expect(ui.getByRole('button', { name: 'Create a game' })).toBeInTheDocument()
     expect(ui.getByRole('button', { name: 'Join a game' })).toBeInTheDocument()
-    expect(ui.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument()
+
+    await user.click(ui.getByRole('button', { name: 'Back' }))
+    expect(ui.getByRole('button', { name: '2 players' })).toBeInTheDocument()
   })
 
   it.each([
@@ -32,11 +44,60 @@ describe('OnlineGame menu', () => {
   ])('can go back to the menu from "%s"', async (menuButton, formButton) => {
     const user = userEvent.setup()
     const { ui } = open(createMemoryNetwork())
+    await user.click(ui.getByRole('button', { name: '2 players' }))
     await user.click(ui.getByRole('button', { name: menuButton }))
     expect(ui.getByRole('button', { name: formButton })).toBeInTheDocument()
 
     await user.click(ui.getByRole('button', { name: 'Back' }))
     expect(ui.getByRole('button', { name: 'Create a game' })).toBeInTheDocument()
+  })
+})
+
+describe('playing alone', () => {
+  it('sets the round up, reviews the sentences and plays them, then leaves back to the start', async () => {
+    const user = userEvent.setup()
+    const { generator, asked } = instantGenerator()
+    const { ui, container } = open(createMemoryNetwork(), generator)
+    await user.click(ui.getByRole('button', { name: '1 player' }))
+    await user.selectOptions(ui.getByLabelText('I speak'), 'en')
+    await user.click(ui.getByRole('button', { name: 'Weather' }))
+    await user.click(ui.getByRole('button', { name: 'Start' }))
+
+    await user.click(await ui.findByRole('button', { name: 'Looks good' }))
+    expect(english).toContain(sentenceOn({ container }))
+    await user.click(ui.getByRole('button', { name: 'Show translation' }))
+    await user.click(ui.getByRole('button', { name: 'Next turn' }))
+    await user.click(ui.getByRole('button', { name: 'Finish round' }))
+    expect(ui.getByRole('heading', { name: 'Round complete' })).toBeInTheDocument()
+    expect(asked).toHaveLength(1)
+    expect(asked[0]).toMatchObject({ language: 'en', translate: true, topic: { kind: 'preset', id: 'weather' } })
+
+    await user.click(ui.getByRole('button', { name: 'Leave' }))
+    expect(ui.getByRole('button', { name: '1 player' })).toBeInTheDocument()
+  })
+
+  it('can go back from the setup to the first choice', async () => {
+    const user = userEvent.setup()
+    const { ui } = open(createMemoryNetwork())
+    await user.click(ui.getByRole('button', { name: '1 player' }))
+    await user.click(ui.getByRole('button', { name: 'Back' }))
+    expect(ui.getByRole('button', { name: '2 players' })).toBeInTheDocument()
+  })
+
+  it('does not touch the network', async () => {
+    const user = userEvent.setup()
+    const network = createMemoryNetwork()
+    const host = vi.spyOn(network, 'createRoom')
+    const join = vi.spyOn(network, 'join')
+    const { ui } = open(network, instantGenerator().generator)
+    await user.click(ui.getByRole('button', { name: '1 player' }))
+    await user.selectOptions(ui.getByLabelText('I speak'), 'de')
+    await user.click(ui.getByRole('button', { name: 'Weather' }))
+    await user.click(ui.getByRole('button', { name: 'Start' }))
+    await ui.findByRole('button', { name: 'Looks good' })
+
+    expect(host).not.toHaveBeenCalled()
+    expect(join).not.toHaveBeenCalled()
   })
 })
 
@@ -141,7 +202,7 @@ describe('invite links', () => {
 
   it('starts on the menu when there is no code', () => {
     const view = render(<OnlineGame network={createMemoryNetwork()} languages={languages} />)
-    expect(within(view.container).getByRole('button', { name: 'Create a game' })).toBeInTheDocument()
+    expect(within(view.container).getByRole('button', { name: '2 players' })).toBeInTheDocument()
   })
 })
 
@@ -253,6 +314,7 @@ describe('connection problems', () => {
     const network = createMemoryNetwork()
     network.unavailable = true
     const device = open(network)
+    await user.click(device.ui.getByRole('button', { name: '2 players' }))
     await user.click(device.ui.getByRole('button', { name: 'Create a game' }))
     await user.selectOptions(device.ui.getByLabelText('I speak'), 'de')
     await chooseRound(device, user)

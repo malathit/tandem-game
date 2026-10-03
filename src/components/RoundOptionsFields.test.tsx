@@ -59,3 +59,12 @@ describe('RoundOptionsFields', () => {
     expect(onChange).toHaveBeenCalledExactlyOnceWith({ count: 4, translate: true, difficulty: 'hard' })
   })
 })
+
+describe('RoundOptionsFields for one player', () => {
+  it('asks for sentences rather than sentences per player, and has no translation switch', () => {
+    render(<RoundOptionsFields options={DEFAULT_ROUND_OPTIONS} onChange={vi.fn()} solo />)
+    expect(screen.getByLabelText('Sentences')).toHaveValue('2')
+    expect(screen.getByLabelText('Difficulty')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Show the translation after each turn')).not.toBeInTheDocument()
+  })
+})

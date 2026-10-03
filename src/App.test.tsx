@@ -8,11 +8,11 @@ afterEach(() => {
 })
 
 describe('App', () => {
-  it('opens straight on creating or joining a game', () => {
+  it('opens on the choice between playing alone and with a partner', () => {
     render(<App network={createMemoryNetwork()} />)
     expect(screen.getByRole('heading', { name: 'Tandem Game' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Create a game' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Join a game' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '1 player' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2 players' })).toBeInTheDocument()
   })
 
   it('no longer offers to play on one device', () => {
@@ -36,7 +36,7 @@ describe('opening an invite link', () => {
     window.history.replaceState(null, '', '/tandem-game/?join=abc')
     render(<App network={createMemoryNetwork()} />)
 
-    expect(screen.getByRole('button', { name: 'Create a game' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2 players' })).toBeInTheDocument()
     expect(window.location.search).toBe('?join=abc')
   })
 })

@@ -10,9 +10,11 @@ interface TopicPickerProps {
   onOptionsChange: (options: RoundOptions) => void
   /** Called with a preset topic's id, or with the trimmed text of a custom topic. */
   onSelect: (topic: string) => void
+  /** Practising alone: see `RoundOptionsFields`. */
+  solo?: boolean
 }
 
-export function TopicPicker({ topics, options, onOptionsChange, onSelect }: TopicPickerProps) {
+export function TopicPicker({ topics, options, onOptionsChange, onSelect, solo = false }: TopicPickerProps) {
   const [custom, setCustom] = useState('')
   const customTopic = custom.trim()
 
@@ -26,7 +28,7 @@ export function TopicPicker({ topics, options, onOptionsChange, onSelect }: Topi
   return (
     <section className="card">
       <h2>Choose a topic</h2>
-      <RoundOptionsFields options={options} onChange={onOptionsChange} />
+      <RoundOptionsFields options={options} onChange={onOptionsChange} solo={solo} />
       {topics.length === 0 ? (
         <p>No topics for this language pair yet.</p>
       ) : (
