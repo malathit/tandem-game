@@ -12,4 +12,4 @@ binding = "AI"
 binding = "POOL"
 
 [vars]
-ALLOWED_ORIGINS = "https://tandem-game.github.io,https://www.malathi.dev,http://localhost:5173,http://localhost:4173"
+ALLOWED_ORIGINS = "https://tandem-game.github.io,http://localhost:5173,http://localhost:4173"

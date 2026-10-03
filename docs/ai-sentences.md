@@ -43,7 +43,7 @@ Configured in `worker/wrangler.toml`:
 - **Review before play.** A small model can write odd sentences, and a topic can try to steer it (prompt injection; the spike showed it can follow an instruction hidden in a topic). Each player reviews the sentences they will read, so the review is the real safeguard. Translations are written by the same model and are not reviewed beforehand; they only appear during play.
 - **Free plan, no billing.** The Worker runs on Cloudflare's free plan with no card. When a daily limit is reached, calls fail and the game says "the free AI allowance is used up"; stored batches for preset topics are served first if there are any.
 - **Daily cap.** The Worker counts its AI calls in KV (`cap:<date>`) and stops at 400 a day. That keeps it inside KV's 1,000 writes a day and the 10,000 free neurons a day (a call costs about 5).
-- **CORS.** Only `https://www.malathi.dev` and local development may call the Worker from a browser, but anyone can still call it with `curl`. The daily cap is the real limit.
+- **CORS.** Only `https://tandem-game.github.io` and local development may call the Worker from a browser, but anyone can still call it with `curl`. The daily cap is the real limit.
 - **Privacy.** A topic you type is sent to Cloudflare to generate sentences. Nothing else about you is.
 
 ## Try it locally

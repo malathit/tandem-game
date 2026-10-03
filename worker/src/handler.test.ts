@@ -3,7 +3,7 @@ import { PRESET_TOPICS } from '../../src/content/topics'
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { createHandler, type AiBinding, type KvStore } from './handler'
 
-const ORIGIN = 'https://www.malathi.dev'
+const ORIGIN = 'https://tandem-game.github.io'
 const good = { sentences: ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.'] }
 const other = { sentences: ['Wir wollen heute ins Kino gehen.', 'Sie darf später schlafen.'] }
 
