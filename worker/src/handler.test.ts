@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { PRESET_TOPICS } from '../../src/content/topics'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { createHandler, type AiBinding, type KvStore } from './handler'
 
 const ORIGIN = 'https://www.malathi.dev'
@@ -151,6 +151,46 @@ describe('generating sentences', () => {
     expect(status).toBe(502)
     expect(body).toEqual({ error: 'invalid' })
     expect(ai.calls).toHaveLength(2)
+  })
+
+  describe('logging unusable answers', () => {
+    const warnings = () => warn.mock.calls.map(([line]) => JSON.parse(line as string))
+    let warn: MockInstance<typeof console.warn>
+
+    beforeEach(() => {
+      warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    })
+    afterEach(() => warn.mockRestore())
+
+    it('says why each attempt was rejected, with the request settings and the start of the answer', async () => {
+      const tooLong = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen'
+      ai.replies = [{ sentences: [tooLong, 'I do not like you'] }, 'nope']
+      await ask(preset({ difficulty: 'hard', count: 2 }))
+      expect(warnings()).toEqual([
+        expect.objectContaining({ event: 'rejected-answer', attempt: 1, reason: 'bad-length', language: 'de', difficulty: 'hard', count: 2, translate: false, answer: expect.stringContaining('fourteen') }),
+        expect.objectContaining({ event: 'rejected-answer', attempt: 2, reason: 'not-json', answer: 'nope' }),
+      ])
+    })
+
+    it('names the reason for translated answers too', async () => {
+      ai.replies = [good, good]
+      await ask({ ...custom('pets'), translate: true })
+      expect(warnings().map(({ reason }) => reason)).toEqual(['bad-shape', 'bad-shape'])
+    })
+
+    it('cuts a long answer short and leaves the custom topic out', async () => {
+      ai.replies = ['x'.repeat(5000), good]
+      await ask(custom('my secret topic'))
+      const [line] = warn.mock.calls[0]
+      expect(warnings()[0].answer).toHaveLength(300)
+      expect(line).not.toContain('my secret topic')
+    })
+
+    it('stays quiet when the answer is usable', async () => {
+      ai.replies = [good]
+      await ask(preset())
+      expect(warn).not.toHaveBeenCalled()
+    })
   })
 
   it('reports the service as unavailable when the AI fails, without leaking the error', async () => {

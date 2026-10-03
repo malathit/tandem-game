@@ -82,6 +82,25 @@ function answerOf(output: unknown): unknown {
   return undefined
 }
 
+const LOGGED_ANSWER_CHARACTERS = 300
+
+/** One line for the Worker's logs saying why an answer was thrown away. The custom topic is left out on purpose. */
+function logRejection({ language, count, translate, difficulty }: GenerateRequest, attempt: number, reason: string, answer: unknown) {
+  const text = typeof answer === 'string' ? answer : JSON.stringify(answer)
+  console.warn(
+    JSON.stringify({
+      event: 'rejected-answer',
+      attempt: attempt + 1,
+      reason,
+      language,
+      count,
+      difficulty,
+      translate,
+      answer: text?.slice(0, LOGGED_ANSWER_CHARACTERS),
+    }),
+  )
+}
+
 const isOutOfCapacity = (error: unknown) =>
   error instanceof Error && /4006|daily free allocation|out of capacity/i.test(error.message)
 
@@ -129,9 +148,11 @@ export function createHandler({ ai, kv, allowedOrigins, dailyCap = DEFAULT_DAILY
       if (request.translate) {
         const parsed = parseTranslatedOutput(answer, request.language, request.count)
         if (parsed.ok) return { sentences: parsed.sentences, translations: parsed.translations }
+        logRejection(request, attempt, parsed.reason, answer)
       } else {
         const parsed = parseModelOutput(answer, request.language, request.count)
         if (parsed.ok) return { sentences: parsed.sentences }
+        logRejection(request, attempt, parsed.reason, answer)
       }
     }
     return { error: 'invalid' }
