@@ -48,7 +48,8 @@ export function LanguageSetup({ languages, onContinue }: LanguageSetupProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form className="card" onSubmit={handleSubmit}>
+      <h2>Who is learning what?</h2>
       <LanguageSelect
         label="Player 1 is learning"
         value={player1}
@@ -62,7 +63,7 @@ export function LanguageSetup({ languages, onContinue }: LanguageSetupProps) {
         onChange={setPlayer2}
       />
       {sameLanguage && <p role="alert">Players need to learn different languages.</p>}
-      <button type="submit" disabled={!bothChosen || sameLanguage}>
+      <button type="submit" className="primary" disabled={!bothChosen || sameLanguage}>
         Continue
       </button>
     </form>

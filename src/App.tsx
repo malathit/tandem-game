@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Game } from './components/Game'
 import { LanguageSetup } from './components/LanguageSetup'
+import { StepIndicator } from './components/StepIndicator'
 import { TopicPicker } from './components/TopicPicker'
 import { staticSource } from './content/staticSource'
 import type { LanguagePair } from './content/types'
@@ -34,15 +35,23 @@ function App() {
     setRound({ topic, turns: buildTurns(pair, topic, staticSource), number })
   }
 
+  const step = pair === null ? 1 : round === null ? 2 : 3
+
   return (
     <main>
-      <h1>Tandem Game</h1>
+      <header className="app-header">
+        <h1>Tandem Game</h1>
+        <p>Learn a language together, one sentence at a time.</p>
+      </header>
+      <StepIndicator current={step} />
       {pair === null ? (
         <LanguageSetup languages={languages} onContinue={setPair} />
       ) : (
         <>
-          <p>Player 1 is learning {nameOf(pair[0])}.</p>
-          <p>Player 2 is learning {nameOf(pair[1])}.</p>
+          <ul className="players">
+            <li data-player="1">Player 1 is learning {nameOf(pair[0])}</li>
+            <li data-player="2">Player 2 is learning {nameOf(pair[1])}</li>
+          </ul>
           {round === null ? (
             <TopicPicker
               topics={staticSource.getTopics(pair)}
@@ -51,9 +60,13 @@ function App() {
           ) : (
             <>
               {/* A topic is either a preset id (shown by its name) or text the players typed. */}
-              <p>Topic: {staticSource.getTopics(pair).find((t) => t.id === round.topic)?.name ?? round.topic}</p>
+              <p className="topic">
+                Topic: {staticSource.getTopics(pair).find((t) => t.id === round.topic)?.name ?? round.topic}
+              </p>
               {round.turns.length === 0 ? (
-                <p role="status">No sentences yet for this topic.</p>
+                <p className="card" role="status">
+                  No sentences yet for this topic.
+                </p>
               ) : (
                 // A new `key` makes React throw away the old <Game> and start a fresh one.
                 <Game
@@ -63,14 +76,18 @@ function App() {
                   onPlayAgain={() => startRound(pair, round.topic, round.number + 1)}
                 />
               )}
-              <button type="button" onClick={() => setRound(null)}>
-                Change topic
-              </button>
             </>
           )}
-          <button type="button" onClick={changeLanguages}>
-            Change languages
-          </button>
+          <div className="actions">
+            {round !== null && (
+              <button type="button" className="secondary" onClick={() => setRound(null)}>
+                Change topic
+              </button>
+            )}
+            <button type="button" className="secondary" onClick={changeLanguages}>
+              Change languages
+            </button>
+          </div>
         </>
       )}
     </main>

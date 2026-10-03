@@ -17,10 +17,10 @@ export function Game({ turns, languages, onPlayAgain }: GameProps) {
 
   if (state.status === 'finished') {
     return (
-      <section>
+      <section className="card finished">
         <h2>Round complete</h2>
         <p>{state.turns.length} sentences translated.</p>
-        <button type="button" onClick={onPlayAgain}>
+        <button type="button" className="primary" onClick={onPlayAgain}>
           Play again
         </button>
       </section>
@@ -32,16 +32,18 @@ export function Game({ turns, languages, onPlayAgain }: GameProps) {
   const learning = languages.find((l) => l.code === turn.learning)?.name ?? turn.learning
 
   return (
-    <section>
-      <p>
+    // data-player lets the CSS give each player their own colour.
+    <section className="card" data-player={turn.player}>
+      <p className="turn-count">
         Turn {state.index + 1} of {state.turns.length}
       </p>
+      <progress value={state.index + 1} max={state.turns.length} aria-hidden="true" />
       <h2>
         Player {turn.player}, translate into {learning}:
       </h2>
-      <p>{turn.sentence.text}</p>
+      <p className="sentence">{turn.sentence.text}</p>
       {/* The UI only says what happened; the reducer decides what changes. */}
-      <button type="button" onClick={() => dispatch({ type: 'NEXT_TURN' })}>
+      <button type="button" className="primary" onClick={() => dispatch({ type: 'NEXT_TURN' })}>
         {isLastTurn ? 'Finish round' : 'Next turn'}
       </button>
     </section>

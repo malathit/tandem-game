@@ -19,16 +19,16 @@ export function TopicPicker({ topics, onSelect }: TopicPickerProps) {
   }
 
   return (
-    <section>
+    <section className="card">
       <h2>Choose a topic</h2>
       {topics.length === 0 ? (
         <p>No topics for this language pair yet.</p>
       ) : (
         // Rendering a list: one <li> per topic, each with a stable `key`.
-        <ul>
+        <ul className="topic-grid">
           {topics.map((topic) => (
             <li key={topic.id}>
-              <button type="button" onClick={() => onSelect(topic.id)}>
+              <button type="button" className="topic-card" onClick={() => onSelect(topic.id)}>
                 {topic.name}
               </button>
             </li>
@@ -40,7 +40,7 @@ export function TopicPicker({ topics, onSelect }: TopicPickerProps) {
           Or enter your own topic
           <input value={custom} maxLength={60} onChange={(e) => setCustom(e.target.value)} />
         </label>
-        <button type="submit" disabled={!customTopic}>
+        <button type="submit" className="primary" disabled={!customTopic}>
           Use this topic
         </button>
       </form>
