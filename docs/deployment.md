@@ -4,6 +4,8 @@
 
 Pushing to `main` builds the app and deploys it to GitHub Pages via `.github/workflows/deploy.yml`. Pages must be enabled once under Settings → Pages → Source: **GitHub Actions**.
 
+Before the site goes live, an `e2e` job in the same workflow serves the built files on `localhost:4173` and runs the end-to-end tests against them with the real Worker (that address is one of the Worker's allowed origins). If they fail, the site is not deployed.
+
 ## The Worker (once by hand, then from CI)
 
 `deploy.yml` redeploys the Worker before the site goes live, but only when something it depends on changed: `worker/`, `src/generation/request.ts`, `types.ts`, `validate.ts` or `src/content/topics.ts` (tests excluded). It also runs on a manual `workflow_dispatch`. The site deploy waits for it and is blocked if it fails. It needs the repository secrets `CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template, limited to this account) and `CLOUDFLARE_ACCOUNT_ID`, under the `cloudflare` environment or at repository level.
