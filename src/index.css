@@ -12,3 +12,21 @@ main {
   margin: 0 auto;
   padding: 2rem 1rem;
 }
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+select,
+button {
+  font: inherit;
+  padding: 0.5rem;
+}
