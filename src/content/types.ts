@@ -1,4 +1,9 @@
-export type LanguageCode = 'en' | 'de'
+export const LANGUAGE_CODES = ['en', 'de'] as const
+
+export type LanguageCode = (typeof LANGUAGE_CODES)[number]
+
+export const isLanguageCode = (value: unknown): value is LanguageCode =>
+  LANGUAGE_CODES.some((code) => code === value)
 
 export interface Language {
   code: LanguageCode
