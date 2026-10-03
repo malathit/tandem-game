@@ -10,7 +10,8 @@ export default defineConfig({
   fullyParallel: false,
   timeout: 90_000,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  // In CI the `github` reporter puts each failure on the run page as an annotation.
+  reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: SITE_URL,
     trace: 'retain-on-failure',
