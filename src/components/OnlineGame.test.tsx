@@ -1,6 +1,6 @@
 import { render, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { staticSource } from '../content/staticSource'
 import type { Language } from '../content/types'
 import { createMemoryNetwork, type MemoryNetwork } from '../test/memoryNetwork'
@@ -10,10 +10,14 @@ const languages: Language[] = staticSource.getLanguages()
 
 type User = ReturnType<typeof userEvent.setup>
 
-function open(network: MemoryNetwork, onExit = vi.fn()) {
-  const view = render(<OnlineGame network={network} languages={languages} onExit={onExit} />)
-  return { ...view, ui: within(view.container), onExit }
+function open(network: MemoryNetwork) {
+  const view = render(<OnlineGame network={network} languages={languages} />)
+  return { ...view, ui: within(view.container) }
 }
+
+/** The label of the step the screen says we are on. */
+const currentStep = (device: { container: HTMLElement }) =>
+  device.container.querySelector('[aria-current="step"]')?.textContent
 
 /** A device that creates a game, learning English. Resolves once the code is shown. */
 async function createGame(network: MemoryNetwork, user: User) {
@@ -45,13 +49,24 @@ const sentenceOn = (device: { container: HTMLElement }) =>
   device.container.querySelector('.sentence')?.textContent
 
 describe('OnlineGame menu', () => {
-  it('offers to create or join a game and can go back', async () => {
-    const user = userEvent.setup()
-    const { ui, onExit } = open(createMemoryNetwork())
+  it('offers to create or join a game', () => {
+    const { ui } = open(createMemoryNetwork())
     expect(ui.getByRole('button', { name: 'Create a game' })).toBeInTheDocument()
     expect(ui.getByRole('button', { name: 'Join a game' })).toBeInTheDocument()
+    expect(ui.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['Create a game', 'Create game'],
+    ['Join a game', 'Join game'],
+  ])('can go back to the menu from "%s"', async (menuButton, formButton) => {
+    const user = userEvent.setup()
+    const { ui } = open(createMemoryNetwork())
+    await user.click(ui.getByRole('button', { name: menuButton }))
+    expect(ui.getByRole('button', { name: formButton })).toBeInTheDocument()
+
     await user.click(ui.getByRole('button', { name: 'Back' }))
-    expect(onExit).toHaveBeenCalledOnce()
+    expect(ui.getByRole('button', { name: 'Create a game' })).toBeInTheDocument()
   })
 })
 
@@ -131,6 +146,31 @@ describe('playing a whole round on two devices', () => {
   })
 })
 
+describe('progress steps', () => {
+  it('move from Connect to Topic to Play on both devices', async () => {
+    const user = userEvent.setup()
+    const network = createMemoryNetwork()
+    const host = await createGame(network, user)
+    expect(currentStep(host)).toBe('Connect')
+
+    const guest = await startJoining(network, user, host.code)
+    await guest.ui.findByLabelText('I am learning')
+    expect(currentStep(guest)).toBe('Connect')
+
+    await user.selectOptions(guest.ui.getByLabelText('I am learning'), 'de')
+    await user.click(guest.ui.getByRole('button', { name: 'Continue' }))
+    await host.ui.findByRole('button', { name: 'Modal verbs' })
+    await guest.ui.findByText(/waiting for the host to choose a topic/i)
+    expect(currentStep(host)).toBe('Topic')
+    expect(currentStep(guest)).toBe('Topic')
+
+    await user.click(host.ui.getByRole('button', { name: 'Modal verbs' }))
+    await guest.ui.findByText('Turn 1 of 4')
+    expect(currentStep(host)).toBe('Play')
+    expect(currentStep(guest)).toBe('Play')
+  })
+})
+
 describe('joining', () => {
   it("does not offer the guest the language the host is already learning", async () => {
     const user = userEvent.setup()
@@ -205,8 +245,7 @@ describe('connection problems', () => {
     await host.ui.findByRole('button', { name: 'Modal verbs' })
 
     await user.click(host.ui.getByRole('button', { name: 'Leave game' }))
-    expect(host.onExit).toHaveBeenCalledOnce()
-    host.unmount() // the app does this when it leaves two-device play
+    expect(host.ui.getByRole('button', { name: 'Create a game' })).toBeInTheDocument()
     expect(await guest.ui.findByRole('alert')).toHaveTextContent(/connection .* lost/i)
   })
 })

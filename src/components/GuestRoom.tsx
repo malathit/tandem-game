@@ -5,6 +5,7 @@ import type { Network } from '../online/network'
 import { useGuestSession, type GuestSession } from '../online/useGuestSession'
 import { LanguagePicker } from './LanguagePicker'
 import { PlayerChips } from './PlayerChips'
+import { StepIndicator } from './StepIndicator'
 import { TurnView } from './TurnView'
 
 interface GuestRoomProps {
@@ -96,8 +97,11 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
     )
   }
 
+  const step = room === null || room.guestLearning === null ? 1 : room.round === null ? 2 : 3
+
   return (
     <>
+      <StepIndicator current={step} />
       {renderBody()}
       <div className="actions">
         <button type="button" className="secondary" onClick={onLeave}>

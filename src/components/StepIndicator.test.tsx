@@ -6,14 +6,14 @@ describe('StepIndicator', () => {
   it('lists the three steps in order', () => {
     render(<StepIndicator current={1} />)
     expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'Languages',
+      'Connect',
       'Topic',
       'Play',
     ])
   })
 
   it.each([
-    [1, 'Languages'],
+    [1, 'Connect'],
     [2, 'Topic'],
     [3, 'Play'],
   ] as const)('marks only step %i as the current one', (current, label) => {

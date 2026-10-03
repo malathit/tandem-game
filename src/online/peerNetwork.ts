@@ -15,7 +15,7 @@ const MAX_CODE_ATTEMPTS = 5
 
 type PeerClass = typeof Peer
 
-// Loaded on first use, so players who stay on one device never download PeerJS.
+// Loaded on first use, so the start screen appears without waiting for PeerJS.
 const loadPeer = async (): Promise<PeerClass> => (await import('peerjs')).Peer
 
 function wrap(connection: DataConnection, dispose: () => void = () => {}): Connection {

@@ -6,6 +6,7 @@ import { topicName } from '../game/topicName'
 import type { Network } from '../online/network'
 import { useHostSession } from '../online/useHostSession'
 import { PlayerChips } from './PlayerChips'
+import { StepIndicator } from './StepIndicator'
 import { TopicPicker } from './TopicPicker'
 import { TurnView } from './TurnView'
 
@@ -22,6 +23,7 @@ export function HostRoom({ network, languages, hostLearning, onLeave }: HostRoom
   const [emptyTopic, setEmptyTopic] = useState<string | null>(null)
   const { guestLearning, round } = room
   const pair = guestLearning === null ? null : ([room.hostLearning, guestLearning] as const)
+  const step = pair === null ? 1 : round === null ? 2 : 3
 
   function renderBody() {
     if (status === 'opening') {
@@ -95,6 +97,7 @@ export function HostRoom({ network, languages, hostLearning, onLeave }: HostRoom
 
   return (
     <>
+      <StepIndicator current={step} />
       {pair !== null && !partnerConnected && (
         <p className="notice" role="status">
           Your partner is disconnected. They can rejoin with the code {code}.

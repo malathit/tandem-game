@@ -16,11 +16,10 @@ type Stage =
 interface OnlineGameProps {
   network: Network
   languages: Language[]
-  /** Leaves two-device play and returns to the start screen. */
-  onExit: () => void
 }
 
-export function OnlineGame({ network, languages, onExit }: OnlineGameProps) {
+/** Walks the players from creating or joining a game, through to playing it. */
+export function OnlineGame({ network, languages }: OnlineGameProps) {
   const [stage, setStage] = useState<Stage>({ kind: 'menu' })
   const toMenu = () => setStage({ kind: 'menu' })
 
@@ -28,7 +27,7 @@ export function OnlineGame({ network, languages, onExit }: OnlineGameProps) {
     case 'menu':
       return (
         <section className="card">
-          <h2>Play on two devices</h2>
+          <h2>Start a game</h2>
           <p>
             One of you creates a game and shares its code, and the other joins with it. You say your
             translations out loud, so stay on a call or sit together.
@@ -38,9 +37,6 @@ export function OnlineGame({ network, languages, onExit }: OnlineGameProps) {
           </button>
           <button type="button" onClick={() => setStage({ kind: 'join-setup' })}>
             Join a game
-          </button>
-          <button type="button" className="secondary" onClick={onExit}>
-            Back
           </button>
         </section>
       )
@@ -62,7 +58,7 @@ export function OnlineGame({ network, languages, onExit }: OnlineGameProps) {
       )
 
     case 'host':
-      return <HostRoom network={network} languages={languages} hostLearning={stage.learning} onLeave={onExit} />
+      return <HostRoom network={network} languages={languages} hostLearning={stage.learning} onLeave={toMenu} />
 
     case 'join-setup':
       return (
@@ -85,7 +81,7 @@ export function OnlineGame({ network, languages, onExit }: OnlineGameProps) {
           code={stage.code}
           onRetry={() => setStage({ ...stage, attempt: stage.attempt + 1 })}
           onChangeCode={() => setStage({ kind: 'join-setup' })}
-          onLeave={onExit}
+          onLeave={toMenu}
         />
       )
   }

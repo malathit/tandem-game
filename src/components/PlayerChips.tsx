@@ -4,8 +4,8 @@ interface PlayerChipsProps {
   /** [language Player 1 is learning, language Player 2 is learning] */
   pair: LanguagePair
   languages: Language[]
-  /** Marks which player this device belongs to, in two-device games. */
-  me?: 1 | 2
+  /** Marks which player this device belongs to. */
+  me: 1 | 2
 }
 
 export function PlayerChips({ pair, languages, me }: PlayerChipsProps) {

@@ -11,7 +11,7 @@ interface TurnViewProps {
   onPlayAgain?: () => void
 }
 
-/** Shows a round; it owns no state, so it works for one device and for two. */
+/** Shows a round from the host's copy of the game; it owns no state itself. */
 export function TurnView({ game, languages, canAct, onNext, onPlayAgain }: TurnViewProps) {
   if (game.status === 'finished') {
     return (
