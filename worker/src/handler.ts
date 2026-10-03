@@ -43,11 +43,15 @@ const STATUS: Record<GenerationErrorKind | 'unavailable-storage', number> = {
 
 type Outcome = GeneratedSentences | { error: GenerationErrorKind | 'unavailable-storage' }
 
-/** What each level asks of a sentence. The word limits stay inside what `validate.ts` accepts (3 to 14 words). */
+/**
+ * What each level asks of a sentence. The word limits stay inside what `validate.ts` accepts (3 to 14 words).
+ * The model tends to write about three words more than it is told (asked for 10 to 13, it wrote 14 to 18),
+ * so `hard` asks for fewer than it can accept.
+ */
 const STYLE: Record<Difficulty, string> = {
   easy: 'very simple: present tense, everyday words, 4 to 7 words long',
   medium: 'simple, 4 to 12 words long',
-  hard: 'challenging: 10 to 13 words long, with a subordinate clause, varied tenses and some less common vocabulary',
+  hard: 'challenging: 8 to 11 words long (never more than 11), with a subordinate clause, varied tenses and some less common vocabulary',
 }
 
 function systemPrompt({ language, count, translate, difficulty }: GenerateRequest): string {

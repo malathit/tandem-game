@@ -258,7 +258,9 @@ describe('generating sentences', () => {
       it('asks for longer sentences with richer grammar when hard, within what the checks allow', async () => {
         const prompt = await promptFor('hard')
         expect(prompt).toMatch(/subordinate clause/i)
-        expect(prompt).toMatch(/10 to 13 words/)
+        // The model overshoots a stated length by about three words, and the checks stop at 14: aim well below it.
+        expect(prompt).toMatch(/8 to 11 words/)
+        expect(prompt).toMatch(/never more than 11/)
       })
 
       it('refuses an unknown level before spending anything', async () => {
