@@ -7,7 +7,7 @@ compatibility_date = "2026-05-03"
 binding = "AI"
 
 # Stored sentences for preset topics and the daily AI-call counter.
-# `id` is added when the namespace is created (see worker/README.md).
+# `id` is added when the namespace is created (see docs/deployment.md).
 [[kv_namespaces]]
 binding = "POOL"
 
