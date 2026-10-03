@@ -19,6 +19,7 @@ npm run build    # type-check and bundle into dist/
 npm run preview  # serve the production build locally
 npm run lint
 npm test         # unit tests (Vitest)
+npm run e2e      # end-to-end tests against the live site (Playwright; see below)
 ```
 
 Requires Node 22 (see `.nvmrc`).
@@ -78,3 +79,9 @@ Then, in the GitHub repository, add an **Actions variable** (Settings → Secret
 
 Pushing to `main` builds the app and deploys it to GitHub Pages via `.github/workflows/deploy.yml`.
 Pages must be enabled once under Settings → Pages → Source: **GitHub Actions**.
+
+### End-to-end tests
+
+`npm run e2e` plays real games on the **deployed** site with two separate browsers (a host and a guest, connected over real WebRTC) and makes real calls to the AI Worker: a preset topic with Regenerate, a custom topic, and the fallback when the Worker cannot be reached. Run `npx playwright install chromium` once first; set `E2E_URL` to aim them at another address.
+
+`.github/workflows/e2e.yml` runs them after every successful deploy and once a day, so a broken Worker or a used-up daily AI allowance shows up as a failed run (the report is attached to it). Each run uses about 5 of the Worker's 400 daily AI calls. Right after a deploy the Pages cache can still serve the old build for a few minutes, so a failure there is worth one re-run before digging.
