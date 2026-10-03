@@ -128,6 +128,48 @@ describe('invite links', () => {
   })
 })
 
+describe('joining announcements', () => {
+  it('tells the host their partner has joined, and keeps saying so until the partner picks a language', async () => {
+    const user = userEvent.setup()
+    const network = createMemoryNetwork()
+    const host = await createGame(network, user)
+    expect(host.ui.getByLabelText('Invite link')).toBeInTheDocument()
+
+    const guest = await startJoining(network, user, host.code)
+
+    expect(await host.ui.findByRole('heading', { name: /your partner has joined/i })).toBeInTheDocument()
+    expect(host.ui.getByText(/waiting for them to choose their language/i)).toBeInTheDocument()
+    expect(host.ui.queryByLabelText('Invite link')).not.toBeInTheDocument()
+
+    await user.selectOptions(await guest.ui.findByLabelText('I am learning'), 'de')
+    await user.click(guest.ui.getByRole('button', { name: 'Continue' }))
+    await host.ui.findByRole('button', { name: 'Greetings and small talk' })
+    expect(host.ui.queryByRole('heading', { name: /has joined/i })).not.toBeInTheDocument()
+  })
+
+  it('shows the host the invite again if the partner drops before choosing a language', async () => {
+    const user = userEvent.setup()
+    const network = createMemoryNetwork()
+    const host = await createGame(network, user)
+    const guest = await startJoining(network, user, host.code)
+    await host.ui.findByRole('heading', { name: /your partner has joined/i })
+
+    await user.click(guest.ui.getByRole('button', { name: 'Leave game' }))
+    expect(await host.ui.findByLabelText('Invite link')).toBeInTheDocument()
+    expect(host.ui.queryByRole('heading', { name: /has joined/i })).not.toBeInTheDocument()
+  })
+
+  it('takes the guest straight to the language picker with a banner saying they have joined', async () => {
+    const user = userEvent.setup()
+    const network = createMemoryNetwork()
+    const host = await createGame(network, user)
+    const guest = await startJoining(network, user, host.code)
+
+    expect(await guest.ui.findByLabelText('I am learning')).toBeInTheDocument()
+    expect(guest.ui.getByRole('status')).toHaveTextContent(/you've joined the room/i)
+  })
+})
+
 describe('progress steps', () => {
   it('move from Connect to Topic to Play on both devices', async () => {
     const user = userEvent.setup()

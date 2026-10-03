@@ -48,6 +48,14 @@ export function HostRoom({ network, languages, hostLearning, generator, onLeave 
         </p>
       )
     }
+    if (pair === null && partnerConnected) {
+      return (
+        <section className="card joined" role="status">
+          <h2>Your partner has joined! 🎉</h2>
+          <p>Waiting for them to choose their language…</p>
+        </section>
+      )
+    }
     if (pair === null) {
       return (
         <section className="card">
@@ -55,11 +63,7 @@ export function HostRoom({ network, languages, hostLearning, generator, onLeave 
           <p>Send your partner this link, or ask them to choose “Join a game” and enter this code:</p>
           <p className="room-code">{code}</p>
           {code !== null && <InviteLink url={buildInviteUrl(code, window.location.href)} />}
-          <p role="status">
-            {partnerConnected
-              ? 'Your partner is connected. Waiting for them to choose a language…'
-              : 'Waiting for your partner to join…'}
-          </p>
+          <p role="status">Waiting for your partner to join…</p>
         </section>
       )
     }

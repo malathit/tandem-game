@@ -60,17 +60,22 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
     if (guestLearning === null) {
       const hostLanguage = languages.find((l) => l.code === room.hostLearning)?.name ?? room.hostLearning
       return (
-        <section className="card">
-          <h2>You're in!</h2>
-          <p>Your partner is learning {hostLanguage}. Which language are you learning?</p>
-          <LanguagePicker
-            languages={languages}
-            label="I am learning"
-            submitLabel="Continue"
-            exclude={room.hostLearning}
-            onSubmit={chooseLanguage}
-          />
-        </section>
+        <>
+          <p className="notice joined" role="status">
+            🎉 You've joined the room!
+          </p>
+          <section className="card">
+            <h2>Choose your language</h2>
+            <p>Your partner is learning {hostLanguage}. Which language are you learning?</p>
+            <LanguagePicker
+              languages={languages}
+              label="I am learning"
+              submitLabel="Continue"
+              exclude={room.hostLearning}
+              onSubmit={chooseLanguage}
+            />
+          </section>
+        </>
       )
     }
 

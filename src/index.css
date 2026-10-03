@@ -489,7 +489,22 @@ button:disabled {
   gap: var(--space-1);
 }
 
+.joined {
+  text-align: center;
+}
+
 @media (prefers-reduced-motion: no-preference) {
+  .joined {
+    animation: joined-pop 0.4s ease-out;
+  }
+
+  @keyframes joined-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+  }
+
   button,
   .topic-card {
     transition:
