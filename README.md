@@ -12,7 +12,10 @@ npm run dev      # dev server with hot reload (http://localhost:5173/tandem-game
 npm run build    # type-check and bundle into dist/
 npm run preview  # serve the production build locally
 npm run lint
+npm test         # unit tests (Vitest)
 ```
+
+Requires Node 22 (see `.nvmrc`).
 
 ## Deployment
 
