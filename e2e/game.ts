@@ -4,6 +4,9 @@ import { SITE_URL } from '../playwright.config'
 /** The preset topic the host picks unless a test says otherwise. */
 export const TOPIC = 'Greetings and small talk'
 
+/** The setup screen's heading: it only says "Review" once sentences exist, so a failed or slow request has the other. */
+const SETUP_HEADING = /^(Getting your sentences ready|Review your sentences)$/
+
 export interface Turn {
   player: 1 | 2
   text: string
@@ -63,10 +66,10 @@ export async function startGame(browser: Browser, settings: Settings = {}, ready
   // Connecting goes through the public PeerJS broker, so allow it some time; on failure, show what the guest saw.
   // The guest has nothing to choose: once connected, the host sets their language and the review begins.
   await expect(
-    guest.getByRole('heading', { name: 'Review your sentences' }),
+    guest.getByRole('heading', { name: SETUP_HEADING }),
     `the guest's screen: ${await guest.locator('main').innerText()}`,
   ).toBeVisible({ timeout: 30_000 })
-  await expect(host.getByRole('heading', { name: 'Review your sentences' })).toBeVisible({ timeout: 30_000 })
+  await expect(host.getByRole('heading', { name: SETUP_HEADING })).toBeVisible({ timeout: 30_000 })
   return { host, guest }
 }
 
