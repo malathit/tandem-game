@@ -35,6 +35,7 @@ export function JoinForm({ onJoin }: JoinFormProps) {
           }}
         />
       </label>
+      <p className="hint">Ask the person who created the game for its 5-character code, or open their invite link.</p>
       {invalid && <p role="alert">A game code has 5 characters: letters and the numbers 2 to 9.</p>}
       <button type="submit" className="primary" disabled={value.trim() === ''}>
         Join game

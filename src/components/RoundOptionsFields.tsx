@@ -16,7 +16,7 @@ const DIFFICULTY_NAMES: Record<Difficulty, string> = { easy: 'Easy', medium: 'Me
 
 const COUNT_HELP = 'How many sentences each of you reads aloud in a round, from 1 to 5.'
 
-const REVIEW_HELP = 'Read the sentences before the round starts, and ask for new ones if you like.'
+const REVIEW_HELP = 'Off: the round starts as soon as the sentences are written. On: each player reads their own sentences first, and can ask for new ones.'
 
 const DIFFICULTY_HELP: Record<Difficulty, string> = {
   easy: 'short sentences of 4 to 7 words, in the present tense, with everyday words.',

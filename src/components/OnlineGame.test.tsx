@@ -277,8 +277,8 @@ describe('progress steps', () => {
     const guest = await startJoining(network, user, host.code)
     await reviewing(host)
     await guest.ui.findByRole('heading', { name: 'Review your sentences' })
-    expect(currentStep(host)).toBe('Review')
-    expect(currentStep(guest)).toBe('Review')
+    expect(currentStep(host)).toBe('Sentences')
+    expect(currentStep(guest)).toBe('Sentences')
 
     await startRound(host, guest, user)
     await guest.ui.findByText('Turn 1 of 4')

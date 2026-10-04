@@ -53,7 +53,7 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
     if (room === null || room.guestKnows === null) {
       return (
         <p className="waiting" role="status">
-          Connected. Waiting for the host…
+          Connected. Waiting for the host to start the game…
         </p>
       )
     }

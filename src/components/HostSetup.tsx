@@ -40,7 +40,7 @@ export function HostSetup({ languages, topics, defaults, lastTopic, onCreate, on
     [solo ? 'Sentences' : 'Sentences per player', String(options.count)],
     ['Difficulty', options.difficulty],
     ['Review sentences', options.review ? 'yes' : 'no'],
-    ['Translations', 'shown after each turn'],
+    ['Translations', 'when you tap “Show translation”'],
   ]
 
   return (

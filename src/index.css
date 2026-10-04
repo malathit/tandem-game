@@ -585,3 +585,13 @@ button:disabled {
       filter 0.15s;
   }
 }
+
+.how-it-works {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  text-align: left;
+}
+
+.how-it-works li + li {
+  margin-top: 0.35rem;
+}

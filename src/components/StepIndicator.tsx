@@ -1,4 +1,4 @@
-const STEPS = ['Connect', 'Review', 'Play'] as const
+const STEPS = ['Connect', 'Sentences', 'Play'] as const
 
 interface StepIndicatorProps {
   current: 1 | 2 | 3

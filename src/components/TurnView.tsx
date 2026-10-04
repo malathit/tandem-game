@@ -30,9 +30,12 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
         <p>{game.turns.length} sentences translated.</p>
         {onPrevious && game.turns.length > 0 && previousButton}
         {onPlayAgain ? (
-          <button type="button" className="primary" onClick={onPlayAgain}>
-            Play again
-          </button>
+          <>
+            <p className="hint">Play again for new sentences on the same topic, or change the topic.</p>
+            <button type="button" className="primary" onClick={onPlayAgain}>
+              Play again
+            </button>
+          </>
         ) : (
           <p role="status">Waiting for the host to start another round.</p>
         )}
@@ -61,6 +64,11 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
           {turn.sentence.translation}
         </p>
       )}
+      <p className="hint">
+        {canAct
+          ? `Say it aloud in ${learning}. Show the translation to check yourself, or skip it.`
+          : `Listen to your partner, and tell them if it sounds right.`}
+      </p>
       {canAct ? (
         // The speaker may show the translation first, or move on without showing it.
         <>
@@ -77,6 +85,7 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
         <p role="status">Waiting for your partner to finish their turn…</p>
       )}
       {onPrevious && game.index > 0 && previousButton}
+      <p className="preview-source">Written by AI, so a sentence can contain mistakes.</p>
     </section>
   )
 }

@@ -70,7 +70,12 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
       return (
         <section className="card">
           <h2>Start a game</h2>
-          <p>Practise on your own, or with a partner. You say your translations out loud.</p>
+          <p>Practise on your own, or with a partner.</p>
+          <ol className="how-it-works">
+            <li>An AI writes sentences on a topic you choose, in your own language.</li>
+            <li>You read each one and say it aloud in the language you are learning.</li>
+            <li>Tap “Show translation” to check yourself, or let your partner judge. Nothing is scored.</li>
+          </ol>
           <button type="button" className="primary" onClick={() => setStage({ kind: 'solo-setup' })}>
             1 player
           </button>
