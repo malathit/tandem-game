@@ -8,7 +8,7 @@ export interface GameState {
   revealed: boolean
 }
 
-export type GameAction = { type: 'NEXT_TURN' } | { type: 'REVEAL' }
+export type GameAction = { type: 'NEXT_TURN' } | { type: 'PREVIOUS_TURN' } | { type: 'REVEAL' }
 
 export function createGame(turns: Turn[]): GameState {
   return { turns, index: 0, status: turns.length > 0 ? 'playing' : 'finished', revealed: false }
@@ -26,6 +26,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return isLastTurn
         ? { ...state, status: 'finished', revealed: false }
         : { ...state, index: state.index + 1, revealed: false }
+    }
+    case 'PREVIOUS_TURN': {
+      // From a finished round this reopens the last turn; the translation starts hidden, as on every turn.
+      if (state.status === 'finished') {
+        return state.turns.length > 0 ? { ...state, status: 'playing', revealed: false } : state
+      }
+      return state.index === 0 ? state : { ...state, index: state.index - 1, revealed: false }
     }
     case 'REVEAL':
       if (state.status === 'finished') return state

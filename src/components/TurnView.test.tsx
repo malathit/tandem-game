@@ -18,7 +18,10 @@ const turns: GameState['turns'] = [
 const playing: GameState = { turns, index: 0, status: 'playing', revealed: false }
 const finished: GameState = { turns, index: 1, status: 'finished', revealed: false }
 
-function setup(game: GameState, props: { canAct?: boolean; onPlayAgain?: () => void } = {}) {
+function setup(
+  game: GameState,
+  props: { canAct?: boolean; onPlayAgain?: () => void; onPrevious?: () => void } = {},
+) {
   const onNext = vi.fn()
   const onReveal = vi.fn()
   render(
@@ -29,6 +32,7 @@ function setup(game: GameState, props: { canAct?: boolean; onPlayAgain?: () => v
       onNext={onNext}
       onReveal={onReveal}
       onPlayAgain={props.onPlayAgain}
+      onPrevious={props.onPrevious}
     />,
   )
   return { onNext, onReveal, user: userEvent.setup() }
@@ -118,6 +122,40 @@ describe('TurnView', () => {
     expect(screen.getByRole('heading', { name: 'Round complete' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Play again' }))
     expect(onPlayAgain).toHaveBeenCalledOnce()
+  })
+
+  describe('going back to the previous sentence', () => {
+    const second: GameState = { ...playing, index: 1 }
+    const previous = { name: 'Previous sentence' }
+
+    it('is offered on a later turn, even to the player who is waiting', async () => {
+      const onPrevious = vi.fn()
+      const { user } = setup(second, { canAct: false, onPrevious })
+      await user.click(screen.getByRole('button', previous))
+      expect(onPrevious).toHaveBeenCalledOnce()
+    })
+
+    it('is not offered on the first turn', () => {
+      setup(playing, { onPrevious: vi.fn() })
+      expect(screen.queryByRole('button', previous)).not.toBeInTheDocument()
+    })
+
+    it('is not offered to a device that was not given it', () => {
+      setup(second)
+      expect(screen.queryByRole('button', previous)).not.toBeInTheDocument()
+    })
+
+    it('is offered on the round complete screen', async () => {
+      const onPrevious = vi.fn()
+      const { user } = setup(finished, { onPrevious })
+      await user.click(screen.getByRole('button', previous))
+      expect(onPrevious).toHaveBeenCalledOnce()
+    })
+
+    it('is not offered when the round has a single sentence and is still on it', () => {
+      setup({ ...playing, turns: turns.slice(0, 1) }, { onPrevious: vi.fn() })
+      expect(screen.queryByRole('button', previous)).not.toBeInTheDocument()
+    })
   })
 
   it('tells a device that cannot restart the round to wait for the host', () => {

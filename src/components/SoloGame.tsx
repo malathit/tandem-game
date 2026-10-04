@@ -71,6 +71,7 @@ export function SoloGame({ languages, settings, generator, onLeave }: SoloGamePr
             canAct
             onNext={() => setRound({ ...round, game: gameReducer(round.game, { type: 'NEXT_TURN' }) })}
             onReveal={() => setRound({ ...round, game: gameReducer(round.game, { type: 'REVEAL' }) })}
+            onPrevious={() => setRound({ ...round, game: gameReducer(round.game, { type: 'PREVIOUS_TURN' }) })}
             onPlayAgain={() => {
               // Review again, so the topic gets new sentences rather than the same ones.
               setRound(null)

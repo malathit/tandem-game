@@ -45,6 +45,40 @@ describe('gameReducer', () => {
   })
 })
 
+describe('PREVIOUS_TURN', () => {
+  it('moves back one turn and hides the translation again', () => {
+    let state = gameReducer(createGame(turns), { type: 'NEXT_TURN' })
+    state = gameReducer(gameReducer(state, { type: 'REVEAL' }), { type: 'PREVIOUS_TURN' })
+    expect(state).toEqual({ turns, index: 0, status: 'playing', revealed: false })
+  })
+
+  it('stays on the first turn', () => {
+    const first = createGame(turns)
+    expect(gameReducer(first, { type: 'PREVIOUS_TURN' })).toBe(first)
+  })
+
+  it('reopens the last turn once the game is finished', () => {
+    const finished = { turns, index: 2, status: 'finished', revealed: false } as const
+    expect(gameReducer(finished, { type: 'PREVIOUS_TURN' })).toEqual({
+      turns,
+      index: 2,
+      status: 'playing',
+      revealed: false,
+    })
+  })
+
+  it('finishes again when walking forward after going back from the end', () => {
+    const finished = { turns, index: 2, status: 'finished', revealed: false } as const
+    const reopened = gameReducer(finished, { type: 'PREVIOUS_TURN' })
+    expect(gameReducer(reopened, { type: 'NEXT_TURN' })).toEqual(finished)
+  })
+
+  it('stays put on a finished game with no turns', () => {
+    const empty = createGame([])
+    expect(gameReducer(empty, { type: 'PREVIOUS_TURN' })).toBe(empty)
+  })
+})
+
 describe('revealing the translation', () => {
   it('shows the translation of the current turn', () => {
     expect(gameReducer(createGame(turns), { type: 'REVEAL' }).revealed).toBe(true)

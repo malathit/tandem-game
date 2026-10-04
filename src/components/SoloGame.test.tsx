@@ -55,6 +55,23 @@ describe('SoloGame', () => {
     expect(ui.getByRole('heading', { name: 'Round complete' })).toBeInTheDocument()
   })
 
+  it('lets the player go back to earlier sentences, during the round and after it', async () => {
+    const { ui, user, container } = play()
+    await user.click(await ui.findByRole('button', { name: 'Looks good' }))
+    const first = sentenceOn(container)
+    expect(ui.queryByRole('button', { name: 'Previous sentence' })).not.toBeInTheDocument()
+
+    await user.click(ui.getByRole('button', { name: 'Next turn' }))
+    await user.click(ui.getByRole('button', { name: 'Previous sentence' }))
+    expect(ui.getByText('Turn 1 of 2')).toBeInTheDocument()
+    expect(sentenceOn(container)).toBe(first)
+
+    await user.click(ui.getByRole('button', { name: 'Next turn' }))
+    await user.click(ui.getByRole('button', { name: 'Finish round' }))
+    await user.click(ui.getByRole('button', { name: 'Previous sentence' }))
+    expect(ui.getByText('Turn 2 of 2')).toBeInTheDocument()
+  })
+
   it('offers new sentences for the same topic after a round, and reviews them again', async () => {
     const { generator, asked } = instantGenerator()
     const { ui, user } = play(generator)

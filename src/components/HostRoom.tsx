@@ -162,6 +162,7 @@ export function HostRoom({ network, languages, hostKnows, hostLearns, firstRound
           canAct={myTurn}
           onNext={() => dispatch({ type: 'NEXT_TURN', from: 1 })}
           onReveal={() => dispatch({ type: 'REVEAL', from: 1 })}
+          onPrevious={() => dispatch({ type: 'PREVIOUS_TURN' })}
           onPlayAgain={() => {
             // Review again, so the topic gets new sentences rather than the same ones.
             dispatch({ type: 'CHANGE_TOPIC' })

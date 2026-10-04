@@ -11,15 +11,24 @@ interface TurnViewProps {
   onReveal: () => void
   /** Only given on a device that may start another round. */
   onPlayAgain?: () => void
+  /** Only given on a device that may go back to the previous sentence, whoever's turn it is. */
+  onPrevious?: () => void
 }
 
 /** Shows a round from the host's copy of the game; it owns no state itself. */
-export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgain }: TurnViewProps) {
+export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgain, onPrevious }: TurnViewProps) {
+  const previousButton = (
+    <button type="button" className="secondary" onClick={onPrevious}>
+      Previous sentence
+    </button>
+  )
+
   if (game.status === 'finished') {
     return (
       <section className="card finished">
         <h2>Round complete</h2>
         <p>{game.turns.length} sentences translated.</p>
+        {onPrevious && game.turns.length > 0 && previousButton}
         {onPlayAgain ? (
           <button type="button" className="primary" onClick={onPlayAgain}>
             Play again
@@ -67,6 +76,7 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
       ) : (
         <p role="status">Waiting for your partner to finish their turn…</p>
       )}
+      {onPrevious && game.index > 0 && previousButton}
     </section>
   )
 }

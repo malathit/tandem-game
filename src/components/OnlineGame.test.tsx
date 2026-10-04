@@ -152,6 +152,40 @@ describe('playing a whole round on two devices', () => {
     await guest.ui.findByText('Turn 1 of 4')
   })
 
+  it('lets only the host go back to earlier sentences, during the round and after it', async () => {
+    const user = userEvent.setup()
+    const network = createMemoryNetwork()
+    const host = await createGame(network, user)
+    const guest = await joinGame(network, user, host.code)
+    await startRound(host, guest, user)
+    await host.ui.findByText('Turn 1 of 4')
+    const first = sentenceOn(host)
+    const previous = { name: 'Previous sentence' }
+    expect(host.ui.queryByRole('button', previous)).not.toBeInTheDocument()
+
+    await user.click(host.ui.getByRole('button', { name: 'Next turn' }))
+    await guest.ui.findByText('Turn 2 of 4')
+    expect(guest.ui.queryByRole('button', previous)).not.toBeInTheDocument()
+
+    // The host goes back although it is now the guest's turn; both devices show the first sentence again.
+    await user.click(host.ui.getByRole('button', previous))
+    await host.ui.findByText('Turn 1 of 4')
+    await guest.ui.findByText('Turn 1 of 4')
+    expect(sentenceOn(host)).toBe(first)
+    expect(sentenceOn(guest)).toBe(first)
+
+    // Play on to the end, then step back from "Round complete".
+    for (const mover of [host, guest, host]) {
+      await user.click(await mover.ui.findByRole('button', { name: 'Next turn' }))
+    }
+    await user.click(await guest.ui.findByRole('button', { name: 'Finish round' }))
+    await host.ui.findByRole('heading', { name: 'Round complete' })
+    await user.click(host.ui.getByRole('button', previous))
+    await host.ui.findByText('Turn 4 of 4')
+    await guest.ui.findByText('Turn 4 of 4')
+    expect(guest.ui.queryByRole('button', previous)).not.toBeInTheDocument()
+  })
+
   it('lets the host go back to choose another topic', async () => {
     const user = userEvent.setup()
     const network = createMemoryNetwork()

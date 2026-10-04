@@ -16,6 +16,8 @@ export type RoomEvent =
   | { type: 'CHANGE_TOPIC' }
   | { type: 'NEXT_TURN'; from: 1 | 2 }
   | { type: 'REVEAL'; from: 1 | 2 }
+  /** The host goes back to the previous sentence, whoever's turn it was; the guest cannot ask for this. */
+  | { type: 'PREVIOUS_TURN' }
 
 /**
  * A new room. With `firstTopic`, it starts out with that topic's sentences on the way (or, if `canGenerate` is false,
@@ -84,6 +86,13 @@ export function roomReducer(state: RoomState, event: RoomEvent): RoomState {
 
     case 'CHANGE_TOPIC':
       return { ...state, review: null, round: null }
+
+    case 'PREVIOUS_TURN': {
+      const { round } = state
+      if (round === null) return state
+      const game = gameReducer(round.game, event)
+      return game === round.game ? state : { ...state, round: { ...round, game } }
+    }
 
     case 'NEXT_TURN':
     case 'REVEAL': {

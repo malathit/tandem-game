@@ -99,6 +99,28 @@ describe('NEXT_TURN', () => {
   })
 })
 
+describe('PREVIOUS_TURN', () => {
+  it("lets the host go back during either player's turn", () => {
+    const second = roomReducer(playing, { type: 'NEXT_TURN', from: 1 })
+    expect(second.round?.game.turns[1].player).toBe(2)
+    expect(roomReducer(second, { type: 'PREVIOUS_TURN' }).round?.game.index).toBe(0)
+  })
+
+  it('reopens the last turn after the round has finished', () => {
+    let room = roomReducer(playing, { type: 'NEXT_TURN', from: 1 })
+    room = roomReducer(room, { type: 'NEXT_TURN', from: 2 })
+    expect(roomReducer(room, { type: 'PREVIOUS_TURN' }).round?.game).toMatchObject({ index: 1, status: 'playing' })
+  })
+
+  it('ignores going back on the first turn', () => {
+    expect(roomReducer(playing, { type: 'PREVIOUS_TURN' })).toBe(playing)
+  })
+
+  it('ignores going back when there is no round', () => {
+    expect(roomReducer(joined, { type: 'PREVIOUS_TURN' })).toBe(joined)
+  })
+})
+
 describe('CHANGE_TOPIC', () => {
   it('goes back to topic choice and keeps both languages', () => {
     const room = roomReducer(playing, { type: 'CHANGE_TOPIC' })
