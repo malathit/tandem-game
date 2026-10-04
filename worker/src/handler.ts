@@ -44,7 +44,7 @@ const STATUS: Record<GenerationErrorKind | 'unavailable-storage', number> = {
 type Outcome = GeneratedSentences | { error: GenerationErrorKind | 'unavailable-storage' }
 
 /**
- * What each level asks of a sentence. The word limits stay inside what `validate.ts` accepts (3 to 14 words).
+ * What each level asks of a sentence. The word limits stay inside what `validate.ts` accepts (3 to 18 words).
  * The model tends to write about three words more than it is told (asked for 10 to 13, it wrote 14 to 18),
  * so `hard` asks for fewer than it can accept.
  */

@@ -67,9 +67,14 @@ describe('parseModelOutput', () => {
       expect(reason(json([]))).toBe('wrong-count')
     })
 
+    it('accepts the long sentences a Hard German answer has, which run past the 11 words that were asked for', () => {
+      const long = 'Nachdem wir den Flughafen erreicht hatten, erfuhren wir leider von der langen Verspätung unseres Fluges'
+      expect(parseModelOutput(json([long, 'Er muss lernen.']), 'de')).toMatchObject({ ok: true })
+    })
+
     it('sentences that are too short or too long', () => {
       expect(reason(json(['Ich', 'Er muss lernen.']))).toBe('bad-length')
-      expect(reason(json([Array(15).fill('ich').join(' '), 'Er muss lernen.']))).toBe('bad-length')
+      expect(reason(json([Array(19).fill('ich').join(' '), 'Er muss lernen.']))).toBe('bad-length')
       expect(reason(json(['Ich kann ' + 'x'.repeat(200), 'Er muss lernen.']))).toBe('bad-length')
       expect(reason(json(['   ', 'Er muss lernen.']))).toBe('bad-length')
     })

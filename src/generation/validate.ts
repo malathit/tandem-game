@@ -2,7 +2,7 @@ import type { LanguageCode } from '../content/types'
 import { DEFAULT_COUNT } from './types'
 
 const MIN_WORDS = 3
-const MAX_WORDS = 14
+const MAX_WORDS = 18
 const MAX_CHARACTERS = 120
 
 export type ParseResult =

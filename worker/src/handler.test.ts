@@ -163,7 +163,7 @@ describe('generating sentences', () => {
     afterEach(() => warn.mockRestore())
 
     it('says why each attempt was rejected, with the request settings and the start of the answer', async () => {
-      const tooLong = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen'
+      const tooLong = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen'
       ai.replies = [{ sentences: [tooLong, 'I do not like you'] }, 'nope']
       await ask(preset({ difficulty: 'hard', count: 2 }))
       expect(warnings()).toEqual([
@@ -258,7 +258,7 @@ describe('generating sentences', () => {
       it('asks for longer sentences with richer grammar when hard, within what the checks allow', async () => {
         const prompt = await promptFor('hard')
         expect(prompt).toMatch(/subordinate clause/i)
-        // The model overshoots a stated length by about three words, and the checks stop at 14: aim well below it.
+        // The model overshoots a stated length by about three words, and the checks stop at 18: aim well below it.
         expect(prompt).toMatch(/8 to 11 words/)
         expect(prompt).toMatch(/never more than 11/)
       })
