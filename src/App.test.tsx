@@ -11,9 +11,11 @@ afterEach(() => {
 })
 
 describe('App', () => {
-  it('opens on the settings the first time, then on the choice between playing alone and with a partner', async () => {
+  it('opens on the tutorial the first time, then the settings, then on the choice between playing alone and with a partner', async () => {
     const user = userEvent.setup()
     render(<App network={createMemoryNetwork()} />)
+    expect(screen.getByRole('heading', { name: 'Welcome to Tandem Game' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Skip tutorial' }))
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
     await user.selectOptions(screen.getByLabelText('I speak'), 'de')
     await user.selectOptions(screen.getByLabelText("I'm learning"), 'en')

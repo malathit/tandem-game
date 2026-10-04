@@ -596,3 +596,7 @@ button:disabled {
 .how-it-works li + li {
   margin-top: 0.35rem;
 }
+
+.tutorial p {
+  margin: 0;
+}

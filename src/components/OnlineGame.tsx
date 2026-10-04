@@ -10,9 +10,12 @@ import { HostSetup, type HostSettings } from './HostSetup'
 import { JoinForm } from './JoinForm'
 import { SettingsForm } from './SettingsForm'
 import { SoloGame } from './SoloGame'
+import { Tutorial } from './Tutorial'
 
 type Stage =
   | { kind: 'mode' }
+  /** A first visit begins here: what the game is, then the settings. */
+  | { kind: 'tutorial' }
   /** Setting the host's defaults; `returnTo` is where saving goes, and back too unless this is the first visit. */
   | { kind: 'settings'; returnTo: Stage }
   | { kind: 'solo-setup' }
@@ -36,13 +39,13 @@ interface OnlineGameProps {
 export function OnlineGame({ network, languages, initialCode, generator }: OnlineGameProps) {
   const [defaults, setDefaults] = useState(loadHostDefaults)
   const [lastTopic, setLastTopic] = useState(loadLastTopic)
-  // A guest has nothing to set up. Anyone else is first asked to save their settings.
+  // A guest has nothing to set up. Anyone else is first shown the tutorial, then asked to save their settings.
   const [stage, setStage] = useState<Stage>(() =>
     initialCode
       ? { kind: 'guest', code: initialCode, attempt: 1 }
       : defaults
         ? { kind: 'mode' }
-        : { kind: 'settings', returnTo: { kind: 'mode' } },
+        : { kind: 'tutorial' },
   )
   // Leaving a two-player game, or backing out of its screens, returns to the create-or-join menu.
   const toMenu = () => setStage({ kind: 'menu' })
@@ -87,6 +90,9 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
           </button>
         </section>
       )
+
+    case 'tutorial':
+      return <Tutorial onDone={() => setStage({ kind: 'settings', returnTo: { kind: 'mode' } })} />
 
     case 'settings':
       return settingsScreen(stage.returnTo, defaults ? () => setStage(stage.returnTo) : undefined)

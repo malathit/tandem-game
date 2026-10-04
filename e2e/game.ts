@@ -25,10 +25,11 @@ export interface Settings {
 }
 
 /**
- * The settings every first visit begins with: German spoken, English learned, and the round options in `settings`.
+ * The settings every first visit begins with, after the tutorial is skipped: German spoken, English learned, and the round options in `settings`.
  * Saving them leads to the start screen.
  */
 export async function saveSettings(page: Page, settings: Settings = {}) {
+  await page.getByRole('button', { name: 'Skip tutorial' }).click()
   await page.getByLabel('I speak').selectOption('de')
   await page.getByLabel("I'm learning").selectOption('en')
   if (settings.count !== undefined) await page.getByLabel(/^Sentences/).selectOption(String(settings.count))

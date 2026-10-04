@@ -10,9 +10,11 @@ import { createMemoryNetwork } from '../test/memoryNetwork'
 const saved = { knows: 'de', learns: 'en', options: { count: 3, difficulty: 'hard', review: true } } as const
 
 describe('the first visit', () => {
-  it('asks for the settings first, with nothing to go back to, and saves them', async () => {
+  it('shows the tutorial, then asks for the settings with nothing to go back to, and saves them', async () => {
     const user = userEvent.setup()
     const { ui } = open(createMemoryNetwork(), undefined, null)
+    expect(ui.getByRole('heading', { name: 'Welcome to Tandem Game' })).toBeInTheDocument()
+    await user.click(ui.getByRole('button', { name: 'Skip tutorial' }))
     expect(ui.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
     expect(ui.queryByRole('button', { name: '1 player' })).not.toBeInTheDocument()
     expect(ui.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument()
