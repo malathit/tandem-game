@@ -79,7 +79,7 @@ export function RoundOptionsFields({ options, onChange, solo = false, withHelp =
         )}
       </div>
       <div className="field">
-        <label>
+        <label className="check">
           <input
             type="checkbox"
             checked={options.review}

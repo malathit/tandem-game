@@ -385,6 +385,7 @@ label.check {
 }
 
 label.check input {
+  flex: none;
   width: 1.25rem;
   min-height: 0;
   height: 1.25rem;
