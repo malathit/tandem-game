@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { staticSource } from '../content/staticSource'
-import { DEFAULT_ROUND_OPTIONS } from '../generation/types'
+import type { HostDefaults } from '../game/hostPreferences'
 import { HostSetup } from './HostSetup'
 
 const languages = staticSource.getLanguages()
@@ -10,111 +10,94 @@ const topics = [
   { id: 'greetings', name: 'Greetings and small talk' },
   { id: 'weather', name: 'Weather' },
 ]
+const defaults: HostDefaults = { knows: 'de', learns: 'en', options: { count: 4, translate: true, difficulty: 'hard' } }
 
-function setup() {
+function setup(props: { lastTopic?: string | null; solo?: boolean; defaults?: HostDefaults } = {}) {
   const onCreate = vi.fn()
+  const onEdit = vi.fn()
   const onBack = vi.fn()
   const user = userEvent.setup()
-  render(<HostSetup languages={languages} topics={topics} onCreate={onCreate} onBack={onBack} />)
-  return {
-    user,
-    onCreate,
-    onBack,
-    create: screen.getByRole('button', { name: 'Create game' }),
-    custom: screen.getByLabelText('Or enter your own topic'),
-  }
+  render(
+    <HostSetup
+      languages={languages}
+      topics={topics}
+      defaults={props.defaults ?? defaults}
+      lastTopic={props.lastTopic === undefined ? 'weather' : props.lastTopic}
+      onCreate={onCreate}
+      onEdit={onEdit}
+      onBack={onBack}
+      solo={props.solo}
+    />,
+  )
+  return { user, onCreate, onEdit, onBack, create: screen.getByRole('button', { name: props.solo ? 'Start' : 'Create game' }) }
 }
 
 describe('HostSetup', () => {
-  it('cannot create the game before a language and a topic are chosen, and says what is missing', async () => {
-    const { user, create, onCreate } = setup()
-    expect(create).toBeDisabled()
-    expect(screen.getByText('Choose a topic to create the game.')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Weather' }))
-    expect(create).toBeDisabled() // still no language
-    expect(screen.queryByText('Choose a topic to create the game.')).not.toBeInTheDocument()
-
-    await user.selectOptions(screen.getByLabelText('I speak'), 'en')
-    expect(create).toBeEnabled()
-    expect(onCreate).not.toHaveBeenCalled()
+  it('summarises the saved settings', () => {
+    setup()
+    const summary = screen.getByText('I speak').closest('dl')
+    expect(summary).toHaveTextContent(/I speakGerman/)
+    expect(summary).toHaveTextContent(/I'm learningEnglish/)
+    expect(summary).toHaveTextContent(/Sentences per player4/)
+    expect(summary).toHaveTextContent(/Difficultyhard/)
+    expect(summary).toHaveTextContent(/Translationsshown after each turn/)
   })
 
-  it('creates the game with a preset topic and the default options', async () => {
-    const { user, create, onCreate } = setup()
-    await user.selectOptions(screen.getByLabelText('I speak'), 'en')
-    await user.click(screen.getByRole('button', { name: 'Weather' }))
-    await user.click(create)
-    expect(onCreate).toHaveBeenCalledExactlyOnceWith({ knows: 'en', topic: 'weather', options: DEFAULT_ROUND_OPTIONS })
+  it('says translations are hidden when they are off', () => {
+    setup({ defaults: { ...defaults, options: { ...defaults.options, translate: false } } })
+    expect(screen.getByText('hidden')).toBeInTheDocument()
   })
 
-  it('creates the game with the options the host chose', async () => {
+  it('creates the game from the saved settings and the last topic', async () => {
     const { user, create, onCreate } = setup()
-    await user.selectOptions(screen.getByLabelText('I speak'), 'de')
-    await user.selectOptions(screen.getByLabelText('Sentences per player'), '4')
-    await user.selectOptions(screen.getByLabelText('Difficulty'), 'hard')
-    await user.click(screen.getByLabelText('Show the translation after each turn'))
-    await user.click(screen.getByRole('button', { name: 'Greetings and small talk' }))
+    expect(screen.getByRole('button', { name: 'Weather' })).toHaveAttribute('aria-pressed', 'true')
     await user.click(create)
     expect(onCreate).toHaveBeenCalledExactlyOnceWith({
       knows: 'de',
-      topic: 'greetings',
-      options: { count: 4, translate: true, difficulty: 'hard' },
+      learns: 'en',
+      topic: 'weather',
+      options: defaults.options,
     })
   })
 
-  it('marks the chosen preset, and only that one', async () => {
-    const { user } = setup()
-    const weather = screen.getByRole('button', { name: 'Weather' })
-    const greetings = screen.getByRole('button', { name: 'Greetings and small talk' })
-    expect(weather).toHaveAttribute('aria-pressed', 'false')
-    await user.click(weather)
-    expect(weather).toHaveAttribute('aria-pressed', 'true')
-    await user.click(greetings)
-    expect(weather).toHaveAttribute('aria-pressed', 'false')
-    expect(greetings).toHaveAttribute('aria-pressed', 'true')
-  })
-
-  it('takes a custom topic, trimmed, and lets typing replace a chosen preset', async () => {
-    const { user, create, custom, onCreate } = setup()
-    await user.selectOptions(screen.getByLabelText('I speak'), 'en')
-    await user.click(screen.getByRole('button', { name: 'Weather' }))
-    await user.type(custom, '  my pet dragon  ')
-    expect(screen.getByRole('button', { name: 'Weather' })).toHaveAttribute('aria-pressed', 'false')
+  it('takes another topic for this game, preset or typed', async () => {
+    const { user, create, onCreate } = setup()
+    await user.click(screen.getByRole('button', { name: 'Greetings and small talk' }))
     await user.click(create)
-    expect(onCreate).toHaveBeenCalledExactlyOnceWith({ knows: 'en', topic: 'my pet dragon', options: DEFAULT_ROUND_OPTIONS })
-  })
+    expect(onCreate).toHaveBeenLastCalledWith(expect.objectContaining({ topic: 'greetings' }))
 
-  it('lets choosing a preset replace what was typed', async () => {
-    const { user, create, custom, onCreate } = setup()
-    await user.selectOptions(screen.getByLabelText('I speak'), 'en')
-    await user.type(custom, 'my pet dragon')
-    await user.click(screen.getByRole('button', { name: 'Weather' }))
-    expect(custom).toHaveValue('')
+    await user.type(screen.getByLabelText('Or enter your own topic'), '  my pet dragon ')
     await user.click(create)
-    expect(onCreate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ topic: 'weather' }))
+    expect(onCreate).toHaveBeenLastCalledWith(expect.objectContaining({ topic: 'my pet dragon' }))
   })
 
-  it('treats a blank custom topic as no topic', async () => {
-    const { user, create, custom, onCreate } = setup()
-    await user.selectOptions(screen.getByLabelText('I speak'), 'en')
-    await user.type(custom, '    ')
+  it('shows a typed last topic in the custom field', () => {
+    setup({ lastTopic: 'my pet dragon' })
+    expect(screen.getByLabelText('Or enter your own topic')).toHaveValue('my pet dragon')
+  })
+
+  it('cannot create the game without a topic, and says so', async () => {
+    const { user, create, onCreate } = setup({ lastTopic: null })
     expect(create).toBeDisabled()
-    await user.type(custom, '{Enter}')
-    expect(onCreate).not.toHaveBeenCalled()
-  })
-
-  it('clears the topic again when the typed text is deleted', async () => {
-    const { user, create, custom } = setup()
-    await user.selectOptions(screen.getByLabelText('I speak'), 'en')
-    await user.type(custom, 'dragons')
+    expect(screen.getByText('Choose a topic to create the game.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Weather' }))
     expect(create).toBeEnabled()
-    await user.clear(custom)
+    await user.clear(screen.getByLabelText('Or enter your own topic'))
+    await user.click(create)
+    expect(onCreate).toHaveBeenCalledOnce()
+  })
+
+  it('treats a blank typed topic as none', async () => {
+    const { user, create } = setup({ lastTopic: null })
+    await user.type(screen.getByLabelText('Or enter your own topic'), '    ')
     expect(create).toBeDisabled()
   })
 
-  it('limits the length of a custom topic', () => {
-    expect(setup().custom).toHaveAttribute('maxlength', '60')
+  it('opens the settings to edit them', async () => {
+    const { user, onEdit, onCreate } = setup()
+    await user.click(screen.getByRole('button', { name: 'Edit settings' }))
+    expect(onEdit).toHaveBeenCalledOnce()
+    expect(onCreate).not.toHaveBeenCalled()
   })
 
   it('goes back', async () => {
@@ -122,37 +105,31 @@ describe('HostSetup', () => {
     await user.click(screen.getByRole('button', { name: 'Back' }))
     expect(onBack).toHaveBeenCalledOnce()
   })
+
+  it('limits the length of a custom topic', () => {
+    setup()
+    expect(screen.getByLabelText('Or enter your own topic')).toHaveAttribute('maxlength', '60')
+  })
 })
 
 describe('HostSetup for one player', () => {
-  function setupSolo() {
-    const onCreate = vi.fn()
-    const user = userEvent.setup()
-    render(<HostSetup languages={languages} topics={topics} onCreate={onCreate} onBack={vi.fn()} solo />)
-    return { user, onCreate }
-  }
-
-  it('is about practising alone: no game is created, and there is no translation switch', () => {
-    setupSolo()
+  it('is about practising alone, and always asks for translations whatever was saved', async () => {
+    const { user, create, onCreate } = setup({
+      solo: true,
+      defaults: { ...defaults, options: { ...defaults.options, translate: false } },
+    })
     expect(screen.getByRole('heading', { name: 'Practise on your own' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: 'Create game' })).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Show the translation after each turn')).not.toBeInTheDocument()
-    expect(screen.getByText('Choose a topic to start.')).toBeInTheDocument()
+    expect(screen.getByText('Sentences')).toBeInTheDocument()
+    expect(screen.getByText('shown after each turn')).toBeInTheDocument()
+    await user.click(create)
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ learns: 'en', options: expect.objectContaining({ translate: true }) }),
+    )
   })
 
-  it('always asks for translations, whatever the options', async () => {
-    const { user, onCreate } = setupSolo()
-    await user.selectOptions(screen.getByLabelText('I speak'), 'de')
-    await user.selectOptions(screen.getByLabelText('Sentences'), '4')
-    await user.selectOptions(screen.getByLabelText('Difficulty'), 'hard')
-    await user.click(screen.getByRole('button', { name: 'Weather' }))
-    await user.click(screen.getByRole('button', { name: 'Start' }))
-
-    expect(onCreate).toHaveBeenCalledWith({
-      knows: 'de',
-      topic: 'weather',
-      options: { count: 4, translate: true, difficulty: 'hard' },
-    })
+  it('says what is missing in its own words', () => {
+    setup({ solo: true, lastTopic: null })
+    expect(screen.getByText('Choose a topic to start.')).toBeInTheDocument()
   })
 })

@@ -24,6 +24,8 @@ const ignore = () => {}
 export function useHostSession(
   network: Network,
   hostKnows: LanguageCode,
+  /** The language the host is learning, which is the one the guest speaks. */
+  hostLearns: LanguageCode,
   /** The guest asked for new sentences; only the host's device can call the AI. */
   onGuestRegenerate: () => void = ignore,
   /** The topic whose sentences are written as soon as the guest has joined, if any. */
@@ -51,11 +53,11 @@ export function useHostSession(
         return
       }
       guest.current = connection
+      // The guest speaks what the host is learning, so there is nothing for them to choose.
+      dispatch({ type: 'GUEST_HELLO', knows: hostLearns })
       connection.onMessage((raw) => {
         const message = parseGuestMessage(raw)
-        if (message?.type === 'hello') {
-          dispatch({ type: 'GUEST_HELLO', knows: message.knows })
-        } else if (message?.type === 'confirm') {
+        if (message?.type === 'confirm') {
           dispatch({ type: 'CONFIRM', from: 2 })
         } else if (message?.type === 'regenerate') {
           regenerate.current()
@@ -97,7 +99,7 @@ export function useHostSession(
       guest.current = null
       openRoom?.close()
     }
-  }, [network])
+  }, [network, hostLearns])
 
   // Send the guest a full copy whenever the state changes or the guest (re)connects.
   useEffect(() => {

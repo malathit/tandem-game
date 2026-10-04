@@ -25,13 +25,6 @@ const withRound = (change: Record<string, unknown>) => ({
 })
 
 describe('parseGuestMessage', () => {
-  it('accepts a hello with a known language', () => {
-    expect(parseGuestMessage({ type: 'hello', knows: 'de' })).toEqual({
-      type: 'hello',
-      knows: 'de',
-    })
-  })
-
   it('accepts reveal', () => {
     expect(parseGuestMessage({ type: 'reveal', extra: 'x' })).toEqual({ type: 'reveal' })
   })
@@ -46,8 +39,8 @@ describe('parseGuestMessage', () => {
   })
 
   it.each([
-    [{ type: 'hello', knows: 'xx' }],
-    [{ type: 'hello' }],
+    // The guest no longer says which language it speaks: the host decides.
+    [{ type: 'hello', knows: 'de' }],
     [{ type: 'explode' }],
     [{}],
     ['next-turn'],

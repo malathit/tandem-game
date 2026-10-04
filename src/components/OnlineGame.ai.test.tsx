@@ -78,8 +78,6 @@ describe('hosting with AI sentences', () => {
       })
       watch.observe(guest.container, { subtree: true, childList: true, characterData: true })
 
-      await user.selectOptions(await guest.ui.findByLabelText('I speak'), 'en')
-      await user.click(guest.ui.getByRole('button', { name: 'Continue' }))
       await waitFor(() => expect(guest.ui.getByRole('status')).toHaveTextContent(/generating/i))
       expect(guest.ui.getByText(/Topic: my pet dragon/)).toBeInTheDocument()
       watch.disconnect()

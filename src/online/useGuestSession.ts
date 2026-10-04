@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { LanguageCode } from '../content/types'
 import { NetworkError, type Connection, type Network } from './network'
 import { parseHostMessage, type GuestMessage, type RoomState } from './protocol'
 
@@ -7,7 +6,6 @@ export interface GuestSession {
   status: 'connecting' | 'connected' | 'lost' | 'not-found' | 'unavailable'
   /** The host's latest copy of the game; null until the first one arrives. */
   room: RoomState | null
-  chooseLanguage: (knows: LanguageCode) => void
   /** Says the sentences this player will read are fine. */
   confirm: () => void
   /** Asks the host for new sentences. */
@@ -60,7 +58,6 @@ export function useGuestSession(network: Network, code: string): GuestSession {
   return {
     status,
     room,
-    chooseLanguage: useCallback((knows) => send({ type: 'hello', knows }), [send]),
     confirm: useCallback(() => send({ type: 'confirm' }), [send]),
     regenerate: useCallback(() => send({ type: 'regenerate' }), [send]),
     nextTurn: useCallback(() => send({ type: 'next-turn' }), [send]),

@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { staticSource } from '../content/staticSource'
 import type { Language } from '../content/types'
 import type { SentenceGenerator } from '../generation/generator'
-import type { Difficulty } from '../generation/types'
+import { saveHostDefaults, type HostDefaults } from '../game/hostPreferences'
+import { DEFAULT_ROUND_OPTIONS, type Difficulty } from '../generation/types'
 import { OnlineGame } from '../components/OnlineGame'
 import { instantGenerator } from './generators'
 import type { MemoryNetwork } from './memoryNetwork'
@@ -12,7 +13,12 @@ export const languages: Language[] = staticSource.getLanguages()
 
 export type User = ReturnType<typeof userEvent.setup>
 
-export function open(network: MemoryNetwork, generator?: SentenceGenerator) {
+/** What the host has saved on a device unless a test says otherwise: speaking German, learning English. */
+export const SAVED_DEFAULTS: HostDefaults = { knows: 'de', learns: 'en', options: DEFAULT_ROUND_OPTIONS }
+
+/** Shows a device. It starts with `saved` settings in the browser, so the settings are not asked first; `null` is a first visit. */
+export function open(network: MemoryNetwork, generator?: SentenceGenerator, saved: HostDefaults | null = SAVED_DEFAULTS) {
+  if (saved) saveHostDefaults(saved)
   const view = render(<OnlineGame network={network} languages={languages} generator={generator} />)
   return { ...view, ui: within(view.container) }
 }
@@ -21,23 +27,19 @@ export function open(network: MemoryNetwork, generator?: SentenceGenerator) {
 export const currentStep = (device: { container: HTMLElement }) =>
   device.container.querySelector('[aria-current="step"]')?.textContent
 
-/** What the host sets before the invite link exists. A preset topic is picked by its name. */
+/** What the host sets for a game. A preset topic is picked by its name. */
 export interface HostChoices {
   topic?: string
   /** Typed instead of picking a preset. */
   customTopic?: string
+  /** These three are the host's saved settings. */
   count?: number
   difficulty?: Difficulty
   translate?: boolean
 }
 
-/** Fills in the topic and round options on the "Create a game" screen. */
-export async function chooseRound(device: ReturnType<typeof open>, user: User, choices: HostChoices = {}) {
-  if (choices.count !== undefined) {
-    await user.selectOptions(device.ui.getByLabelText('Sentences per player'), String(choices.count))
-  }
-  if (choices.difficulty !== undefined) await user.selectOptions(device.ui.getByLabelText('Difficulty'), choices.difficulty)
-  if (choices.translate) await user.click(device.ui.getByLabelText('Show the translation after each turn'))
+/** Picks the topic on the "Create a game" screen, which shows the saved settings. */
+export async function chooseTopic(device: ReturnType<typeof open>, user: User, choices: HostChoices = {}) {
   if (choices.customTopic !== undefined) {
     await user.type(device.ui.getByLabelText('Or enter your own topic'), choices.customTopic)
   } else {
@@ -56,11 +58,16 @@ export async function createGame(
   generator: SentenceGenerator | null = instantGenerator().generator,
   choices: HostChoices = {},
 ) {
-  const device = open(network, generator ?? undefined)
+  const { count, difficulty, translate } = choices
+  const options = {
+    count: count ?? DEFAULT_ROUND_OPTIONS.count,
+    difficulty: difficulty ?? DEFAULT_ROUND_OPTIONS.difficulty,
+    translate: translate ?? DEFAULT_ROUND_OPTIONS.translate,
+  }
+  const device = open(network, generator ?? undefined, { ...SAVED_DEFAULTS, options })
   await user.click(device.ui.getByRole('button', { name: '2 players' }))
   await user.click(device.ui.getByRole('button', { name: 'Create a game' }))
-  await user.selectOptions(device.ui.getByLabelText('I speak'), 'de')
-  await chooseRound(device, user, choices)
+  await chooseTopic(device, user, choices)
   await user.click(device.ui.getByRole('button', { name: 'Create game' }))
   const code = (await device.ui.findByText(/^[A-Z2-9]{5}$/)).textContent ?? ''
   return { ...device, code }
@@ -75,13 +82,8 @@ export async function startJoining(network: MemoryNetwork, user: User, code: str
   return device
 }
 
-/** A device that joins and picks English (so it learns German), ending on the "waiting for the host" screen. */
-export async function joinGame(network: MemoryNetwork, user: User, code: string) {
-  const device = await startJoining(network, user, code)
-  await user.selectOptions(await device.ui.findByLabelText('I speak'), 'en')
-  await user.click(device.ui.getByRole('button', { name: 'Continue' }))
-  return device
-}
+/** A device that joins, ending on the "waiting for the host" screen. It learns German, because the host learns English. */
+export const joinGame = startJoining
 
 export const sentenceOn = (device: { container: HTMLElement }) =>
   device.container.querySelector('.sentence')?.textContent

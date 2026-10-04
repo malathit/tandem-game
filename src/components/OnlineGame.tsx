@@ -1,16 +1,20 @@
 import { useState } from 'react'
 import { staticSource } from '../content/staticSource'
 import type { Language } from '../content/types'
+import { loadHostDefaults, loadLastTopic, saveHostDefaults, saveLastTopic } from '../game/hostPreferences'
 import type { SentenceGenerator } from '../generation/generator'
 import type { Network } from '../online/network'
 import { GuestRoom } from './GuestRoom'
 import { HostRoom } from './HostRoom'
 import { HostSetup, type HostSettings } from './HostSetup'
 import { JoinForm } from './JoinForm'
+import { SettingsForm } from './SettingsForm'
 import { SoloGame } from './SoloGame'
 
 type Stage =
   | { kind: 'mode' }
+  /** Setting the host's defaults; `returnTo` is where saving goes, and back too unless this is the first visit. */
+  | { kind: 'settings'; returnTo: Stage }
   | { kind: 'solo-setup' }
   | { kind: 'solo'; settings: HostSettings }
   | { kind: 'menu' }
@@ -30,12 +34,36 @@ interface OnlineGameProps {
 
 /** Walks the players from creating or joining a game, through to playing it. */
 export function OnlineGame({ network, languages, initialCode, generator }: OnlineGameProps) {
-  const [stage, setStage] = useState<Stage>(
-    initialCode ? { kind: 'guest', code: initialCode, attempt: 1 } : { kind: 'mode' },
+  const [defaults, setDefaults] = useState(loadHostDefaults)
+  const [lastTopic, setLastTopic] = useState(loadLastTopic)
+  // A guest has nothing to set up. Anyone else is first asked to save their settings.
+  const [stage, setStage] = useState<Stage>(() =>
+    initialCode
+      ? { kind: 'guest', code: initialCode, attempt: 1 }
+      : defaults
+        ? { kind: 'mode' }
+        : { kind: 'settings', returnTo: { kind: 'mode' } },
   )
   // Leaving a two-player game, or backing out of its screens, returns to the create-or-join menu.
   const toMenu = () => setStage({ kind: 'menu' })
   const toMode = () => setStage({ kind: 'mode' })
+  const remember = ({ topic }: HostSettings) => {
+    saveLastTopic(topic)
+    setLastTopic(topic)
+  }
+  const settingsScreen = (returnTo: Stage, onBack?: () => void) => (
+    <SettingsForm
+      languages={languages}
+      defaults={defaults}
+      onSave={(saved) => {
+        saveHostDefaults(saved)
+        setDefaults(saved)
+        setStage(returnTo)
+      }}
+      onBack={onBack}
+    />
+  )
+  const editFrom = (returnTo: Stage) => () => setStage({ kind: 'settings', returnTo })
 
   switch (stage.kind) {
     case 'mode':
@@ -49,15 +77,28 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
           <button type="button" onClick={toMenu}>
             2 players
           </button>
+          <button type="button" className="secondary" onClick={editFrom({ kind: 'mode' })}>
+            Settings
+          </button>
         </section>
       )
 
+    case 'settings':
+      return settingsScreen(stage.returnTo, defaults ? () => setStage(stage.returnTo) : undefined)
+
     case 'solo-setup':
+      if (defaults === null) return settingsScreen(stage, toMode)
       return (
         <HostSetup
           languages={languages}
           topics={staticSource.getTopics()}
-          onCreate={(settings) => setStage({ kind: 'solo', settings })}
+          defaults={defaults}
+          lastTopic={lastTopic}
+          onEdit={editFrom(stage)}
+          onCreate={(settings) => {
+            remember(settings)
+            setStage({ kind: 'solo', settings })
+          }}
           onBack={toMode}
           solo
         />
@@ -87,11 +128,18 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
       )
 
     case 'host-setup':
+      if (defaults === null) return settingsScreen(stage, toMenu)
       return (
         <HostSetup
           languages={languages}
           topics={staticSource.getTopics()}
-          onCreate={(settings) => setStage({ kind: 'host', settings })}
+          defaults={defaults}
+          lastTopic={lastTopic}
+          onEdit={editFrom(stage)}
+          onCreate={(settings) => {
+            remember(settings)
+            setStage({ kind: 'host', settings })
+          }}
           onBack={toMenu}
         />
       )
@@ -102,6 +150,7 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
           network={network}
           languages={languages}
           hostKnows={stage.settings.knows}
+          hostLearns={stage.settings.learns}
           firstRound={stage.settings}
           generator={generator}
           onLeave={toMenu}

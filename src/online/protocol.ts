@@ -18,7 +18,7 @@ export interface ReviewState {
 /** Everything both devices need to show the same screen. The host owns it. */
 export interface RoomState {
   hostKnows: LanguageCode
-  /** null until the guest has chosen their language. */
+  /** null until the guest has joined; then the language the host is learning. */
   guestKnows: LanguageCode | null
   /** The sentences being checked; null unless the host has chosen a topic and no round is running. */
   review: ReviewState | null
@@ -29,7 +29,6 @@ export interface RoomState {
 export type HostMessage = { type: 'state'; state: RoomState }
 
 export type GuestMessage =
-  | { type: 'hello'; knows: LanguageCode }
   | { type: 'confirm' }
   | { type: 'regenerate' }
   | { type: 'next-turn' }
@@ -137,8 +136,5 @@ export function parseGuestMessage(raw: unknown): GuestMessage | null {
   if (raw.type === 'reveal') return { type: 'reveal' }
   if (raw.type === 'confirm') return { type: 'confirm' }
   if (raw.type === 'regenerate') return { type: 'regenerate' }
-  if (raw.type === 'hello' && isLanguageCode(raw.knows)) {
-    return { type: 'hello', knows: raw.knows }
-  }
   return null
 }

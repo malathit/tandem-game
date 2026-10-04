@@ -32,9 +32,8 @@ interface Round {
 
 /** One player practising alone: the same review and turns as the two-player game, without a partner or a network. */
 export function SoloGame({ languages, settings, generator, onLeave }: SoloGameProps) {
-  const { knows, topic: firstTopic, options: firstOptions } = settings
-  const learning = languages.find((language) => language.code !== knows)?.code ?? knows
-  const setup = useRoundSetup(learningPair(knows, learning), generator, { solo: true })
+  const { knows, learns, topic: firstTopic, options: firstOptions } = settings
+  const setup = useRoundSetup(learningPair(knows, learns), generator, { solo: true })
   const { state: setupState, choose, back } = setup
   const [options, setOptions] = useState(firstOptions)
   const [round, setRound] = useState<Round | null>(null)
@@ -119,7 +118,7 @@ export function SoloGame({ languages, settings, generator, onLeave }: SoloGamePr
   return (
     <>
       <ul className="players">
-        <li data-player="1">You are learning {nameOf(learning)}</li>
+        <li data-player="1">You are learning {nameOf(learns)}</li>
       </ul>
       {renderBody()}
       <div className="actions">

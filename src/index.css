@@ -86,6 +86,11 @@ p {
   letter-spacing: -0.02em;
 }
 
+.app-header h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+
 .app-header p {
   margin-top: var(--space-1);
   color: var(--muted);
@@ -316,6 +321,42 @@ progress {
 .topic-choice legend {
   padding: 0 var(--space-1);
   font-weight: 700;
+}
+
+/* The saved settings, summarised */
+
+.settings-summary {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.settings-summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.settings-summary dt {
+  color: var(--muted);
+}
+
+.settings-summary dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* A form control with its explanation underneath */
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.help {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 400;
 }
 
 label.check {

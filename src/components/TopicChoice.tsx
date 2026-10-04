@@ -6,12 +6,15 @@ interface TopicChoiceProps {
   topics: Topic[]
   /** The chosen preset's id, the trimmed text of a custom topic, or null while there is none. */
   onChange: (topic: string | null) => void
+  /** A topic to start with: a preset's id, or text for the custom field. */
+  initial?: string | null
 }
 
 /** Picks a topic without acting on it: one preset, or the host's own text, never both. */
-export function TopicChoice({ topics, onChange }: TopicChoiceProps) {
-  const [preset, setPreset] = useState<string | null>(null)
-  const [custom, setCustom] = useState('')
+export function TopicChoice({ topics, onChange, initial = null }: TopicChoiceProps) {
+  const initialIsPreset = topics.some((topic) => topic.id === initial)
+  const [preset, setPreset] = useState<string | null>(initialIsPreset ? initial : null)
+  const [custom, setCustom] = useState(initial && !initialIsPreset ? initial : '')
 
   function choosePreset(id: string) {
     setPreset(id)

@@ -24,6 +24,19 @@ export interface Settings {
 }
 
 /**
+ * The settings every first visit begins with: German spoken, English learned, and the round options in `settings`.
+ * Saving them leads to the start screen.
+ */
+export async function saveSettings(page: Page, settings: Settings = {}) {
+  await page.getByLabel('I speak').selectOption('de')
+  await page.getByLabel("I'm learning").selectOption('en')
+  if (settings.count !== undefined) await page.getByLabel(/^Sentences/).selectOption(String(settings.count))
+  if (settings.difficulty !== undefined) await page.getByLabel('Difficulty').selectOption(settings.difficulty)
+  if (settings.translate) await page.getByLabel('Show the translation after each turn').check()
+  await page.getByRole('button', { name: 'Save settings' }).click()
+}
+
+/**
  * Two separate browsers' worth of state: a host speaking German (learning English) and a guest speaking English (learning German), connected.
  * The host sets the topic and options first; once the guest has joined, the sentences are asked for at once,
  * so `ready` runs on the host's page before the guest joins, for anything that must be in place by then.
@@ -31,12 +44,9 @@ export interface Settings {
 export async function startGame(browser: Browser, settings: Settings = {}, ready?: (host: Page) => Promise<void> | void): Promise<Game> {
   const host = await (await browser.newContext()).newPage()
   await host.goto(SITE_URL)
+  await saveSettings(host, settings)
   await host.getByRole('button', { name: '2 players' }).click()
   await host.getByRole('button', { name: 'Create a game' }).click()
-  await host.getByLabel('I speak').selectOption('de')
-  if (settings.count !== undefined) await host.getByLabel('Sentences per player').selectOption(String(settings.count))
-  if (settings.difficulty !== undefined) await host.getByLabel('Difficulty').selectOption(settings.difficulty)
-  if (settings.translate) await host.getByLabel('Show the translation after each turn').check()
   if (settings.customTopic !== undefined) {
     await host.getByLabel('Or enter your own topic').fill(settings.customTopic)
   } else {
@@ -49,13 +59,11 @@ export async function startGame(browser: Browser, settings: Settings = {}, ready
   const guest = await (await browser.newContext()).newPage()
   await guest.goto(`${SITE_URL}?join=${code}`)
   // Connecting goes through the public PeerJS broker, so allow it some time; on failure, show what the guest saw.
-  await expect(guest.getByLabel('I speak'), `the guest's screen: ${await guest.locator('main').innerText()}`).toBeVisible({
-    timeout: 30_000,
-  })
-  await guest.getByLabel('I speak').selectOption('en')
-  await guest.getByRole('button', { name: 'Continue' }).click()
-
-  // The host's review only starts once the guest's choice has travelled over the real connection.
+  // The guest has nothing to choose: once connected, the host sets their language and the review begins.
+  await expect(
+    guest.getByRole('heading', { name: 'Review your sentences' }),
+    `the guest's screen: ${await guest.locator('main').innerText()}`,
+  ).toBeVisible({ timeout: 30_000 })
   await expect(host.getByRole('heading', { name: 'Review your sentences' })).toBeVisible({ timeout: 30_000 })
   return { host, guest }
 }

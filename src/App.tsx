@@ -33,7 +33,10 @@ function App({ network = peerNetwork, generator = configuredGenerator }: AppProp
     <main>
       <header className="app-header">
         <h1>
-          <span aria-hidden="true">💬</span> Tandem Game
+          {/* A plain link to the site's root: following it reloads the page, which also drops an invite code */}
+          <a href={import.meta.env.BASE_URL}>
+            <span aria-hidden="true">💬</span> Tandem Game
+          </a>
         </h1>
         <p>Learn each other's language, one sentence at a time.</p>
       </header>

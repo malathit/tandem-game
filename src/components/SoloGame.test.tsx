@@ -9,7 +9,7 @@ import { SoloGame } from './SoloGame'
 
 const options: RoundOptions = { count: 2, translate: true, difficulty: 'hard' }
 // A German speaker who is learning English.
-const settings = { knows: 'de', topic: 'greetings', options } as const
+const settings = { knows: 'de', learns: 'en', topic: 'greetings', options } as const
 
 /** `null` is a build without AI. */
 function play(generator: SentenceGenerator | null = instantGenerator().generator, onLeave = vi.fn()) {

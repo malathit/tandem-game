@@ -4,7 +4,6 @@ import { learningPair } from '../game/learningPair'
 import { topicName } from '../game/topicName'
 import type { Network } from '../online/network'
 import { useGuestSession, type GuestSession } from '../online/useGuestSession'
-import { LanguagePicker } from './LanguagePicker'
 import { PlayerChips } from './PlayerChips'
 import { RoundPreview } from './RoundPreview'
 import { StepIndicator } from './StepIndicator'
@@ -27,7 +26,7 @@ const PROBLEMS: Record<Exclude<GuestSession['status'], 'connecting' | 'connected
 
 /** The device that joined: it is Player 2 and shows what the host says is happening. */
 export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onLeave }: GuestRoomProps) {
-  const { status, room, chooseLanguage, confirm, regenerate, nextTurn, reveal } = useGuestSession(network, code)
+  const { status, room, confirm, regenerate, nextTurn, reveal } = useGuestSession(network, code)
 
   function renderBody() {
     if (status === 'connecting') {
@@ -50,7 +49,8 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
         </section>
       )
     }
-    if (room === null) {
+    // The host sets the guest's language when they join, so the first copy of the room already has it.
+    if (room === null || room.guestKnows === null) {
       return (
         <p className="waiting" role="status">
           Connected. Waiting for the host…
@@ -59,27 +59,6 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
     }
 
     const { guestKnows, round } = room
-    if (guestKnows === null) {
-      const hostLanguage = languages.find((l) => l.code === room.hostKnows)?.name ?? room.hostKnows
-      return (
-        <>
-          <p className="notice joined" role="status">
-            🎉 You've joined the room!
-          </p>
-          <section className="card">
-            <h2>Choose your language</h2>
-            <p>Your partner speaks {hostLanguage}. Which language do you speak?</p>
-            <LanguagePicker
-              languages={languages}
-              label="I speak"
-              submitLabel="Continue"
-              exclude={room.hostKnows}
-              onSubmit={chooseLanguage}
-            />
-          </section>
-        </>
-      )
-    }
 
     const pair = learningPair(room.hostKnows, guestKnows)
     if (round === null) {

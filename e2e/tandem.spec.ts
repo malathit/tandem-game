@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { parseModelOutput } from '../src/generation/validate'
-import { confirmSentences, playRound, reviewedTurns, startGame, TOPIC, type Turn } from './game'
+import { confirmSentences, playRound, reviewedTurns, saveSettings, startGame, TOPIC, type Turn } from './game'
 import { SITE_URL } from '../playwright.config'
 
 // Which requests go to the Worker; E2E_WORKER_PATTERN aims this at a local Worker.
@@ -131,9 +131,8 @@ test('a hard round with more sentences is asked for with the host\'s settings an
 
 test('playing alone: the AI writes German sentences, each shows its English translation, and the round can be played again', async ({ page }) => {
   await page.goto(SITE_URL)
+  await saveSettings(page, { count: 2 })
   await page.getByRole('button', { name: '1 player' }).click()
-  await page.getByLabel('I speak').selectOption('de')
-  await page.getByLabel('Sentences').selectOption('2')
   await page.getByRole('button', { name: TOPIC }).click()
   const answered = workerAnswered(page)
   await page.getByRole('button', { name: 'Start' }).click()

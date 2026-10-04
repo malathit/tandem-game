@@ -25,6 +25,7 @@ interface HostRoomProps {
   network: Network
   languages: Language[]
   hostKnows: LanguageCode
+  hostLearns: LanguageCode
   /** The topic and options the host set before the game was opened; its sentences are written once the partner is in. */
   firstRound: { topic: string; options: RoundOptions }
   /** Where the AI's sentences come from; without it there is nothing to play. */
@@ -33,12 +34,13 @@ interface HostRoomProps {
 }
 
 /** The device that created the game: it is Player 1 and runs the game for both. */
-export function HostRoom({ network, languages, hostKnows, firstRound, generator, onLeave }: HostRoomProps) {
+export function HostRoom({ network, languages, hostKnows, hostLearns, firstRound, generator, onLeave }: HostRoomProps) {
   // The guest can ask for new sentences, but the request is made from here, so the session calls back.
   const guestRegenerate = useRef(() => {})
   const { status, code, room, partnerConnected, dispatch } = useHostSession(
     network,
     hostKnows,
+    hostLearns,
     () => guestRegenerate.current(),
     firstRound.topic,
     generator !== undefined,
@@ -56,15 +58,15 @@ export function HostRoom({ network, languages, hostKnows, firstRound, generator,
     guestRegenerate.current = setup.regenerate
   })
 
-  // Once the partner has chosen their language, the sentences can be written: the host already chose what for.
+  // Once the partner has joined, the sentences can be written: the host already chose what for.
   const startFirstRound = useRef(() => {})
   useEffect(() => {
     startFirstRound.current = () => setup.choose(firstRound.topic, firstRound.options)
   })
-  const partnerChoseLanguage = pair !== null
+  const partnerJoined = pair !== null
   useEffect(() => {
-    if (partnerChoseLanguage) startFirstRound.current()
-  }, [partnerChoseLanguage])
+    if (partnerJoined) startFirstRound.current()
+  }, [partnerJoined])
 
   // The guest reviews their sentences too, so the room carries a copy of the host's review.
   // Until the first review has begun, the room's starting review (see `useHostSession`) stays.
@@ -97,14 +99,6 @@ export function HostRoom({ network, languages, hostKnows, firstRound, generator,
         <p className="card" role="alert">
           We couldn't open a game. Check your internet connection and try again.
         </p>
-      )
-    }
-    if (pair === null && partnerConnected) {
-      return (
-        <section className="card joined" role="status">
-          <h2>Your partner has joined! 🎉</h2>
-          <p>Waiting for them to choose their language…</p>
-        </section>
       )
     }
     if (pair === null) {

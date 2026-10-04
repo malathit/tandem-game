@@ -10,12 +10,16 @@ Start by choosing **1 player** or **2 players**.
 
 ### On your own (1 player)
 
-Pick the language you speak, the number of sentences (1 to 5), the difficulty and a topic (one of ten everyday ones, or your own). An AI writes the sentences in your language, with their translations. Review them (ask for new ones if something looks off) and tap "Looks good". For each sentence, say it aloud in the language you are learning, tap "Show translation" to check yourself, then "Next turn". Nothing is sent to another device, and there is no scoring.
+Your saved settings (language you speak, language you are learning, number of sentences from 1 to 5, difficulty) are shown first; pick a topic (one of ten everyday ones, or your own). An AI writes the sentences in your language, with their translations. Review them (ask for new ones if something looks off) and tap "Looks good". For each sentence, say it aloud in the language you are learning, tap "Show translation" to check yourself, then "Next turn". Nothing is sent to another device, and there is no scoring.
+
+### Saved settings
+
+The first time you open the site, you are asked to save your settings: the language you speak (your sentences are written in it, and your partner practises it), the language you are learning (it is also the language your partner speaks), the number of sentences, the difficulty and whether translations are shown. Each setting is explained on that page. They live in this browser's `localStorage` and are never sent anywhere; clearing site data resets them. "Settings" on the first screen opens them again. "1 player" and "Create a game" show them as a summary with your last topic, so you only choose a topic; "Edit settings" opens the settings page and returns to the summary after saving. Someone who opens an invite link is not asked for settings.
 
 ### With a partner (2 players)
 
-1. One player chooses "Create a game", picks the language they speak, and sets up the round: a topic (one of ten everyday ones, or their own), how many sentences each player gets (1 to 5), the difficulty, and whether translations are shown after each turn.
-2. They send their partner the invite link (or the 5-character code). The partner joins and picks the language they speak; each of you then learns the other's language.
+1. One player chooses "Create a game", checks the summary of their saved settings (editing them if needed) and picks a topic (one of ten everyday ones, or their own).
+2. They send their partner the invite link (or the 5-character code). The partner just joins: they speak the language the host is learning, so there is nothing for them to choose.
 3. An AI writes the sentences. Each player reviews the ones they will read aloud (in their own language) and either can ask for new ones. The round starts when both tap "Looks good".
 4. Take turns translating aloud; your partner judges. With translations on, the speaker taps "Show translation" when done, or "Next turn" to skip it.
 
