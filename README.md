@@ -30,10 +30,10 @@ npm run build    # type-check and bundle into dist/
 npm run preview  # serve the production build locally
 npm run lint
 npm test         # unit tests (Vitest)
-npm run e2e      # end-to-end tests against the live site (Playwright)
+npm run e2e      # end-to-end tests (Playwright); against the live site unless E2E_URL is set
 ```
 
-Requires Node 22 (see `.nvmrc`). To generate sentences locally you also need the Worker running, see [docs/ai-sentences.md](docs/ai-sentences.md#try-it-locally).
+Requires Node 22 (see `.nvmrc`). Pushing to `main` runs lint, unit tests and the build, redeploys the Worker if it is affected, runs the e2e tests against the built site, and only then publishes to GitHub Pages. To generate sentences locally you also need the Worker running, see [docs/ai-sentences.md](docs/ai-sentences.md#try-it-locally).
 
 ## How it is put together
 
@@ -52,4 +52,4 @@ Requires Node 22 (see `.nvmrc`). To generate sentences locally you also need the
 ## More
 
 - [AI sentences and the Cloudflare Worker](docs/ai-sentences.md): design, prompts, safeguards, running locally.
-- [Deployment and end-to-end tests](docs/deployment.md): GitHub Pages, deploying the Worker, the daily e2e run.
+- [Deployment and end-to-end tests](docs/deployment.md): GitHub Pages, deploying the Worker (by hand or from CI), the pre-deploy and daily e2e runs.
