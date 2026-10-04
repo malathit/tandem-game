@@ -14,7 +14,7 @@ export const languages: Language[] = staticSource.getLanguages()
 export type User = ReturnType<typeof userEvent.setup>
 
 /** What the host has saved on a device unless a test says otherwise: speaking German, learning English. */
-export const SAVED_DEFAULTS: HostDefaults = { knows: 'de', learns: 'en', options: DEFAULT_ROUND_OPTIONS }
+export const SAVED_DEFAULTS: HostDefaults = { knows: 'de', learns: 'en', options: { ...DEFAULT_ROUND_OPTIONS, review: true } }
 
 /** Shows a device. It starts with `saved` settings in the browser, so the settings are not asked first; `null` is a first visit. */
 export function open(network: MemoryNetwork, generator?: SentenceGenerator, saved: HostDefaults | null = SAVED_DEFAULTS) {
@@ -35,6 +35,7 @@ export interface HostChoices {
   /** These two are the host's saved settings. */
   count?: number
   difficulty?: Difficulty
+  review?: boolean
 }
 
 /** Picks the topic on the "Create a game" screen, which shows the saved settings. */
@@ -57,10 +58,11 @@ export async function createGame(
   generator: SentenceGenerator | null = instantGenerator().generator,
   choices: HostChoices = {},
 ) {
-  const { count, difficulty } = choices
+  const { count, difficulty, review } = choices
   const options = {
     count: count ?? DEFAULT_ROUND_OPTIONS.count,
     difficulty: difficulty ?? DEFAULT_ROUND_OPTIONS.difficulty,
+    review: review ?? true,
   }
   const device = open(network, generator ?? undefined, { ...SAVED_DEFAULTS, options })
   await user.click(device.ui.getByRole('button', { name: '2 players' }))

@@ -7,7 +7,7 @@ import { SAVED_DEFAULTS, languages, open } from '../test/devices'
 import { instantGenerator } from '../test/generators'
 import { createMemoryNetwork } from '../test/memoryNetwork'
 
-const saved = { knows: 'de', learns: 'en', options: { count: 3, difficulty: 'hard' } } as const
+const saved = { knows: 'de', learns: 'en', options: { count: 3, difficulty: 'hard', review: true } } as const
 
 describe('the first visit', () => {
   it('asks for the settings first, with nothing to go back to, and saves them', async () => {
@@ -21,6 +21,7 @@ describe('the first visit', () => {
     await user.selectOptions(ui.getByLabelText("I'm learning"), 'en')
     await user.selectOptions(ui.getByLabelText('Sentences per player'), '3')
     await user.selectOptions(ui.getByLabelText('Difficulty'), 'hard')
+    await user.click(ui.getByLabelText('Review sentences before the round'))
     await user.click(ui.getByRole('button', { name: 'Save settings' }))
 
     expect(loadHostDefaults()).toEqual(saved)
@@ -45,7 +46,7 @@ describe('Settings on the start screen', () => {
     await user.click(ui.getByRole('button', { name: 'Settings' }))
     await user.selectOptions(ui.getByLabelText('Difficulty'), 'easy')
     await user.click(ui.getByRole('button', { name: 'Save settings' }))
-    expect(loadHostDefaults()).toEqual({ ...SAVED_DEFAULTS, options: { ...SAVED_DEFAULTS.options, difficulty: 'easy' } })
+    expect(loadHostDefaults()).toEqual({ ...SAVED_DEFAULTS, options: { ...SAVED_DEFAULTS.options, difficulty: 'easy', review: true } })
     expect(ui.getByRole('button', { name: '1 player' })).toBeInTheDocument()
   })
 })

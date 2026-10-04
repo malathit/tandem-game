@@ -7,7 +7,7 @@ import { languages } from '../test/devices'
 import { english, german, instantGenerator } from '../test/generators'
 import { SoloGame } from './SoloGame'
 
-const options: RoundOptions = { count: 2, difficulty: 'hard' }
+const options: RoundOptions = { count: 2, difficulty: 'hard', review: true }
 // A German speaker who is learning English.
 const settings = { knows: 'de', learns: 'en', topic: 'greetings', options } as const
 
@@ -25,7 +25,17 @@ describe('SoloGame', () => {
     const { ui } = play(generator)
     await ui.findByRole('heading', { name: 'Review your sentences' })
 
-    expect(asked).toEqual([{ language: 'de', topic: { kind: 'preset', id: 'greetings' }, fresh: false, ...options }])
+    expect(asked).toEqual([{ language: 'de', topic: { kind: 'preset', id: 'greetings' }, fresh: false, count: 2, difficulty: 'hard' }])
+  })
+
+  it('goes straight to the first turn when the review is off', async () => {
+    const { generator } = instantGenerator()
+    const view = render(
+      <SoloGame languages={languages} settings={{ ...settings, options: { ...options, review: false } }} generator={generator} onLeave={vi.fn()} />,
+    )
+    const ui = within(view.container)
+    expect(await ui.findByText('Turn 1 of 2')).toBeInTheDocument()
+    expect(ui.queryByRole('heading', { name: 'Review your sentences' })).not.toBeInTheDocument()
   })
 
   it('says it is writing sentences before they arrive, never offering the topics first', async () => {

@@ -39,6 +39,7 @@ export function HostSetup({ languages, topics, defaults, lastTopic, onCreate, on
     ["I'm learning", nameOf(learns)],
     [solo ? 'Sentences' : 'Sentences per player', String(options.count)],
     ['Difficulty', options.difficulty],
+    ['Review sentences', options.review ? 'yes' : 'no'],
     ['Translations', 'shown after each turn'],
   ]
 

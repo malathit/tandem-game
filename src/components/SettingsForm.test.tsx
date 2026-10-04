@@ -40,7 +40,7 @@ describe('SettingsForm', () => {
   })
 
   it('starts from what is saved and saves the changes', async () => {
-    const { user, onSave } = setup({ knows: 'de', learns: 'en', options: { count: 3, difficulty: 'easy' } })
+    const { user, onSave } = setup({ knows: 'de', learns: 'en', options: { count: 3, difficulty: 'easy', review: true } })
     expect(screen.getByLabelText('I speak')).toHaveValue('de')
     expect(screen.getByLabelText("I'm learning")).toHaveValue('en')
     expect(screen.getByLabelText('Sentences per player')).toHaveValue('3')
@@ -49,7 +49,7 @@ describe('SettingsForm', () => {
     expect(onSave).toHaveBeenCalledExactlyOnceWith({
       knows: 'de',
       learns: 'en',
-      options: { count: 3, difficulty: 'hard' },
+      options: { count: 3, difficulty: 'hard', review: true },
     })
   })
 

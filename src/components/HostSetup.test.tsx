@@ -10,7 +10,7 @@ const topics = [
   { id: 'greetings', name: 'Greetings and small talk' },
   { id: 'weather', name: 'Weather' },
 ]
-const defaults: HostDefaults = { knows: 'de', learns: 'en', options: { count: 4, difficulty: 'hard' } }
+const defaults: HostDefaults = { knows: 'de', learns: 'en', options: { count: 4, difficulty: 'hard', review: true } }
 
 function setup(props: { lastTopic?: string | null; solo?: boolean; defaults?: HostDefaults } = {}) {
   const onCreate = vi.fn()

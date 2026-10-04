@@ -1,6 +1,6 @@
 import { isLanguageCode, type LanguageCode } from '../content/types'
 import { MAX_TOPIC_LENGTH } from '../generation/request'
-import { MAX_COUNT, MIN_COUNT, isDifficulty, type RoundOptions } from '../generation/types'
+import { DEFAULT_ROUND_OPTIONS, MAX_COUNT, MIN_COUNT, isDifficulty, type RoundOptions } from '../generation/types'
 
 /** What the host keeps from game to game: the language they speak, the one they learn, and the round options. */
 export interface HostDefaults {
@@ -34,10 +34,10 @@ function write(key: string, value: string) {
 
 function parseOptions(value: unknown): RoundOptions | null {
   if (typeof value !== 'object' || value === null) return null
-  const { count, difficulty } = value as Record<string, unknown>
+  const { count, difficulty, review = DEFAULT_ROUND_OPTIONS.review } = value as Record<string, unknown>
   if (typeof count !== 'number' || !Number.isInteger(count) || count < MIN_COUNT || count > MAX_COUNT) return null
-  if (!isDifficulty(difficulty)) return null
-  return { count, difficulty }
+  if (!isDifficulty(difficulty) || typeof review !== 'boolean') return null
+  return { count, difficulty, review }
 }
 
 export function loadHostDefaults(): HostDefaults | null {

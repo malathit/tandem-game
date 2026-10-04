@@ -16,6 +16,8 @@ const DIFFICULTY_NAMES: Record<Difficulty, string> = { easy: 'Easy', medium: 'Me
 
 const COUNT_HELP = 'How many sentences each of you reads aloud in a round, from 1 to 5.'
 
+const REVIEW_HELP = 'Read the sentences before the round starts, and ask for new ones if you like.'
+
 const DIFFICULTY_HELP: Record<Difficulty, string> = {
   easy: 'short sentences of 4 to 7 words, in the present tense, with everyday words.',
   medium: 'everyday sentences of 4 to 12 words.',
@@ -25,7 +27,7 @@ const DIFFICULTY_HELP: Record<Difficulty, string> = {
 /** The host's choices for a round: how many sentences, and how hard. */
 export function RoundOptionsFields({ options, onChange, solo = false, withHelp = false }: RoundOptionsFieldsProps) {
   const id = useId()
-  const describedBy = (key: 'count' | 'difficulty') => (withHelp ? `${id}-${key}` : undefined)
+  const describedBy = (key: 'count' | 'difficulty' | 'review') => (withHelp ? `${id}-${key}` : undefined)
 
   return (
     <fieldset className="round-options">
@@ -74,6 +76,22 @@ export function RoundOptionsFields({ options, onChange, solo = false, withHelp =
               </li>
             ))}
           </ul>
+        )}
+      </div>
+      <div className="field">
+        <label>
+          <input
+            type="checkbox"
+            checked={options.review}
+            aria-describedby={describedBy('review')}
+            onChange={(e) => onChange({ ...options, review: e.target.checked })}
+          />
+          Review sentences before the round
+        </label>
+        {withHelp && (
+          <small id={`${id}-review`} className="help">
+            {REVIEW_HELP}
+          </small>
         )}
       </div>
     </fieldset>

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
 import { createHttpGenerator, generateForLanguage, generateForPair, GenerationError, type SentenceGenerator } from './generator'
-import type { GeneratedSentences, GenerateRequest, GenerationErrorKind, RoundOptions } from './types'
+import type { GeneratedSentences, GenerateRequest, GenerationErrorKind, GenerationOptions } from './types'
 
 const URL = 'https://worker.example/'
 const request: GenerateRequest = {
@@ -183,7 +183,7 @@ describe('generateForPair', () => {
   const german = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.']
   const english = ['She can swim very well.', 'They should try harder today.']
   const topic = { kind: 'custom', text: 'my pet dragon' } as const
-  const options: RoundOptions = { count: 2, difficulty: 'medium' }
+  const options: GenerationOptions = { count: 2, difficulty: 'medium' }
   const answerFor = (language: string): GeneratedSentences => {
     const sentences = language === 'de' ? german : english
     return { sentences, translations: sentences.map((text) => `${text} (translated)`) }
@@ -265,7 +265,7 @@ describe('generateForPair', () => {
 describe('generateForLanguage', () => {
   const german = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.']
   const topic = { kind: 'custom', text: 'my pet dragon' } as const
-  const options: RoundOptions = { count: 2, difficulty: 'hard' }
+  const options: GenerationOptions = { count: 2, difficulty: 'hard' }
 
   it('makes exactly one request, for that language, with the options', async () => {
     const generate = vi.fn(async (_req: GenerateRequest) => ({ sentences: german, translations: ['one', 'two'] }))

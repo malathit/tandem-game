@@ -20,7 +20,7 @@ The first time you open the site, you are asked to save your settings: the langu
 
 1. One player chooses "Create a game", checks the summary of their saved settings (editing them if needed) and picks a topic (one of ten everyday ones, or their own).
 2. They send their partner the invite link (or the 5-character code). The partner just joins: they speak the language the host is learning, so there is nothing for them to choose.
-3. An AI writes the sentences. Each player reviews the ones they will read aloud (in their own language) and either can ask for new ones. The round starts when both tap "Looks good".
+3. An AI writes the sentences. Each player reviews the ones they will read aloud (in their own language) and either can ask for new ones. The round starts when both tap "Looks good". By default the review is skipped and the round starts as soon as the sentences are written; turn on "Review sentences before the round" in the settings to check them first.
 4. Take turns translating aloud; your partner judges. The speaker taps "Show translation" when done, or "Next turn" to skip it.
 
 Be on a call or in the same room: translations are spoken, not typed.

@@ -25,21 +25,28 @@ interface RoundSetupOptions {
   /** One player: only sentences in their own language are written, and every turn is theirs. */
   solo?: boolean
   source?: ContentSource
+  /** Called instead of showing the sentences when the round's options say not to review them. */
+  onSkipReview?: (topic: GenerateTopic, turns: Turn[]) => void
 }
 
 /**
- * The host's side of starting a round: pick a topic, review the AI's sentences, optionally ask for new ones.
+ * The host's side of starting a round: pick a topic, review the AI's sentences (unless `options.review` is off),
+ * optionally ask for new ones.
  * `pair` is null until the partner has joined, and nothing can be chosen before then.
  * With `solo`, `pair` is [what the player learns, what they speak] and there is no partner.
  */
 export function useRoundSetup(
   pair: LanguagePair | null,
   generator: SentenceGenerator | undefined,
-  { solo = false, source = staticSource }: RoundSetupOptions = {},
+  { solo = false, source = staticSource, onSkipReview }: RoundSetupOptions = {},
 ) {
   const [state, setState] = useState<RoundSetup>(choosing)
   // The request that may still change the state; aborting it makes its result count for nothing.
   const current = useRef<AbortController | null>(null)
+  const skipReview = useRef(onSkipReview)
+  useEffect(() => {
+    skipReview.current = onSkipReview
+  })
 
   const stop = useCallback(() => {
     current.current?.abort()
@@ -62,6 +69,11 @@ export function useRoundSetup(
             )
           : buildTurns(pair, await generateForPair(generator, pair, topic, fresh, options, mine.signal), options.count)
         if (mine.signal.aborted) return
+        if (!options.review && skipReview.current) {
+          setState(choosing)
+          skipReview.current(topic, turns)
+          return
+        }
         setState({
           phase: 'preview',
           topic,

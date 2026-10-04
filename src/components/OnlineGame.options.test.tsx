@@ -1,7 +1,7 @@
 import { waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { confirmSentences, createGame, joinGame, reviewing, sentenceOn, type HostChoices } from '../test/devices'
+import { confirmSentences, createGame, currentStep, joinGame, reviewing, sentenceOn, type HostChoices } from '../test/devices'
 import { english, german, instantGenerator } from '../test/generators'
 import { createMemoryNetwork } from '../test/memoryNetwork'
 
@@ -43,6 +43,18 @@ describe('round options', () => {
     expect(asked.every((request) => request.count === 2 && request.difficulty === 'medium')).toBe(true)
     await confirmSentences(host, guest, user)
     await host.ui.findByText('Turn 1 of 4')
+  })
+
+  it('starts the round for both players without a review when the host turned it off', async () => {
+    const user = userEvent.setup()
+    const network = createMemoryNetwork()
+    const host = await createGame(network, user, instantGenerator().generator, { review: false })
+    const guest = await joinGame(network, user, host.code)
+
+    await host.ui.findByText('Turn 1 of 4')
+    await guest.ui.findByText('Turn 1 of 4')
+    expect(host.ui.queryByRole('heading', { name: 'Review your sentences' })).not.toBeInTheDocument()
+    expect(currentStep(host)).toBe('Play')
   })
 
   it('plays as many turns as the host chose', async () => {

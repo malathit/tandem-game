@@ -14,16 +14,22 @@ export const DEFAULT_DIFFICULTY: Difficulty = 'medium'
 
 export const isDifficulty = (value: unknown): value is Difficulty => DIFFICULTIES.some((level) => level === value)
 
-/** What the host chooses for a round. Every round also has translations. */
-export interface RoundOptions {
+/** What shapes the sentences themselves. Every round also has translations. */
+export interface GenerationOptions {
   /** How many sentences each player reads, from `MIN_COUNT` to `MAX_COUNT`. */
   count: number
   difficulty: Difficulty
 }
 
-export const DEFAULT_ROUND_OPTIONS: RoundOptions = { count: DEFAULT_COUNT, difficulty: DEFAULT_DIFFICULTY }
+/** What the host chooses for a round. */
+export interface RoundOptions extends GenerationOptions {
+  /** Check the sentences before the round starts. Off (the default), the round starts as soon as they are written. */
+  review: boolean
+}
 
-export interface GenerateRequest extends RoundOptions {
+export const DEFAULT_ROUND_OPTIONS: RoundOptions = { count: DEFAULT_COUNT, difficulty: DEFAULT_DIFFICULTY, review: false }
+
+export interface GenerateRequest extends GenerationOptions {
   /** The language the sentences are written in. */
   language: LanguageCode
   topic: GenerateTopic

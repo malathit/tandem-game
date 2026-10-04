@@ -47,7 +47,9 @@ export function HostRoom({ network, languages, hostKnows, hostLearns, firstRound
   )
   const { guestKnows, round } = room
   const pair = guestKnows === null ? null : learningPair(room.hostKnows, guestKnows)
-  const setup = useRoundSetup(pair, generator)
+  const setup = useRoundSetup(pair, generator, {
+    onSkipReview: (topic, turns) => dispatch({ type: 'START_ROUND', topic: topicText(topic), turns }),
+  })
   const { state: setupState, back: backToTopics } = setup
   const [options, setOptions] = useState(firstRound.options)
   const step = pair === null ? 1 : round === null ? 2 : 3

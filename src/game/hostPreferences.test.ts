@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadHostDefaults, loadLastTopic, saveHostDefaults, saveLastTopic } from './hostPreferences'
 
-const defaults = { knows: 'de', learns: 'en', options: { count: 4, difficulty: 'hard' } } as const
+const defaults = { knows: 'de', learns: 'en', options: { count: 4, difficulty: 'hard', review: true } } as const
 
 beforeEach(() => localStorage.clear())
 afterEach(() => vi.restoreAllMocks())
@@ -21,6 +21,16 @@ describe('host defaults', () => {
     expect(loadHostDefaults()).toEqual(defaults)
   })
 
+  it('saved before the review became optional still load, with the review off', () => {
+    localStorage.setItem('tandem.hostDefaults.v2', JSON.stringify({ ...defaults, options: { count: 4, difficulty: 'hard' } }))
+    expect(loadHostDefaults()).toEqual({ ...defaults, options: { ...defaults.options, review: false } })
+  })
+
+  it('keep a host who turned the review on', () => {
+    saveHostDefaults(defaults)
+    expect(loadHostDefaults()).toEqual(defaults)
+  })
+
   it.each([
     ['not JSON', 'nope'],
     ['not an object', '"x"'],
@@ -33,6 +43,7 @@ describe('host defaults', () => {
     ['a count above the maximum', JSON.stringify({ ...defaults, options: { ...defaults.options, count: 6 } })],
     ['a fractional count', JSON.stringify({ ...defaults, options: { ...defaults.options, count: 2.5 } })],
     ['an unknown difficulty', JSON.stringify({ ...defaults, options: { ...defaults.options, difficulty: 'insane' } })],
+    ['a review flag that is not a boolean', JSON.stringify({ ...defaults, options: { ...defaults.options, review: 'no' } })],
     ['missing options', JSON.stringify({ knows: 'en' })],
   ])('are ignored when the stored value is %s', (_, stored) => {
     localStorage.setItem('tandem.hostDefaults.v2', stored)

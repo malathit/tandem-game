@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { generatorFromUrl } from './config'
 import { generateForPair } from './generator'
-import type { RoundOptions } from './types'
+import type { GenerationOptions } from './types'
 
 // An opt-in check against a real Worker, so it never runs in CI. Start one with
 //   cd worker && npx wrangler@4 dev --port 8787
@@ -33,7 +33,7 @@ describe.skipIf(!url)('the real Worker', () => {
   }, 30_000)
 
   it('generates both languages of a round for a custom topic', async () => {
-    const options: RoundOptions = { count: 2, difficulty: 'medium' }
+    const options: GenerationOptions = { count: 2, difficulty: 'medium' }
     const result = await generateForPair(live(), ['en', 'de'], { kind: 'custom', text: 'a rainy day at the beach' }, false, options)
     console.log('custom round:', result)
     expect(result.de).toHaveLength(2)

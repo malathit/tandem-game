@@ -33,7 +33,10 @@ interface Round {
 /** One player practising alone: the same review and turns as the two-player game, without a partner or a network. */
 export function SoloGame({ languages, settings, generator, onLeave }: SoloGameProps) {
   const { knows, learns, topic: firstTopic, options: firstOptions } = settings
-  const setup = useRoundSetup(learningPair(knows, learns), generator, { solo: true })
+  const setup = useRoundSetup(learningPair(knows, learns), generator, {
+    solo: true,
+    onSkipReview: (topic, turns) => setRound({ topic: topicText(topic), game: createGame(turns) }),
+  })
   const { state: setupState, choose, back } = setup
   const [options, setOptions] = useState(firstOptions)
   const [round, setRound] = useState<Round | null>(null)

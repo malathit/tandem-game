@@ -1,6 +1,6 @@
 import type { LanguageCode, LanguagePair, Sentence } from '../content/types'
 import type { SentencesByLanguage } from '../game/buildTurns'
-import type { GenerateRequest, GenerateTopic, GeneratedSentences, GenerationErrorKind, RoundOptions } from './types'
+import type { GenerateRequest, GenerateTopic, GeneratedSentences, GenerationErrorKind, GenerationOptions } from './types'
 import { parseTranslatedOutput } from './validate'
 
 const DEFAULT_TIMEOUT_MS = 20_000
@@ -109,11 +109,14 @@ export async function generateForLanguage(
   language: LanguageCode,
   topic: GenerateTopic,
   fresh: boolean,
-  options: RoundOptions,
+  options: GenerationOptions,
   signal?: AbortSignal,
 ): Promise<Sentence[]> {
   if (signal?.aborted) throw new GenerationError('cancelled')
-  const { sentences, translations } = await generator.generate({ language, topic, fresh, ...options }, signal)
+  const { sentences, translations } = await generator.generate(
+    { language, topic, fresh, count: options.count, difficulty: options.difficulty },
+    signal,
+  )
   return sentences.map((text, i) => ({
     id: `ai-${language}-${i + 1}`,
     text,
@@ -130,7 +133,7 @@ export async function generateForPair(
   pair: LanguagePair,
   topic: GenerateTopic,
   fresh: boolean,
-  options: RoundOptions,
+  options: GenerationOptions,
   signal?: AbortSignal,
 ): Promise<SentencesByLanguage> {
   if (signal?.aborted) throw new GenerationError('cancelled')

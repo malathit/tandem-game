@@ -106,7 +106,7 @@ describe('useRoundSetup', () => {
   describe('round options', () => {
     it('asks for the chosen number of sentences and translations, and builds that many turns', async () => {
       const { result, pending } = start()
-      act(() => result.current.choose(preset, { count: 1, difficulty: 'medium' }))
+      act(() => result.current.choose(preset, { count: 1, difficulty: 'medium', review: true }))
       expect(pending.map((p) => p.request)).toEqual(
         expect.arrayContaining([expect.objectContaining({ count: 1, difficulty: 'medium' })]),
       )
@@ -114,13 +114,13 @@ describe('useRoundSetup', () => {
         for (const p of pending.splice(0)) p.resolve({ sentences: [(p.request.language === 'de' ? german : english)[0]], translations: [(p.request.language === 'de' ? english : german)[0]] })
       })
       await waitFor(() => expect(result.current.state).toMatchObject({ busy: false }))
-      expect(result.current.state).toMatchObject({ options: { count: 1, difficulty: 'medium' } })
+      expect(result.current.state).toMatchObject({ options: { count: 1, difficulty: 'medium', review: true } })
       expect(result.current.state.phase === 'preview' && result.current.state.turns).toHaveLength(2)
     })
 
     it('keeps the options, difficulty included, when it asks for new sentences', async () => {
       const { result, pending } = start()
-      act(() => result.current.choose(preset, { count: 3, difficulty: 'hard' }))
+      act(() => result.current.choose(preset, { count: 3, difficulty: 'hard', review: true }))
       act(() => pending.splice(0).forEach((p) => p.reject(new GenerationError('unavailable'))))
       await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, error: 'unavailable' }))
       act(() => result.current.regenerate())
@@ -288,7 +288,7 @@ describe('useRoundSetup', () => {
 describe('useRoundSetup for one player', () => {
   // The player speaks German and learns English: [what they learn, what they speak].
   const solo = ['en', 'de'] as const
-  const options = { count: 2, difficulty: 'medium' } as const
+  const options = { count: 2, difficulty: 'medium', review: true } as const
 
   function startSolo() {
     const manual = manualGenerator()
@@ -343,6 +343,59 @@ describe('useRoundSetup for one player', () => {
     act(() => result.current.choose(preset, options))
     act(() => result.current.cancel())
     expect(pending[0].signal?.aborted).toBe(true)
+    expect(result.current.state).toEqual({ phase: 'choosing' })
+  })
+})
+
+describe('useRoundSetup without a review', () => {
+  const noReview = { count: 2, difficulty: 'medium', review: false } as const
+
+  function start(onSkipReview = vi.fn()) {
+    const manual = manualGenerator()
+    const { result } = renderHook(() => useRoundSetup(pair, manual.generator, { onSkipReview }))
+    return { ...manual, result, onSkipReview }
+  }
+
+  it('hands the sentences over instead of showing them, and goes back to choosing', async () => {
+    const { result, answerAll, onSkipReview } = start()
+    act(() => result.current.choose(preset, noReview))
+    expect(result.current.state).toMatchObject({ phase: 'preview', busy: true })
+    await act(async () => answerAll())
+
+    expect(onSkipReview).toHaveBeenCalledExactlyOnceWith(
+      { kind: 'preset', id: preset },
+      expect.arrayContaining([expect.objectContaining({ player: 1 })]),
+    )
+    expect(onSkipReview.mock.calls[0][1]).toHaveLength(4)
+    expect(result.current.state).toEqual({ phase: 'choosing' })
+  })
+
+  it('still shows the review when it is on', async () => {
+    const { result, answerAll, onSkipReview } = start()
+    act(() => result.current.choose(preset, { ...noReview, review: true }))
+    await act(async () => answerAll())
+    expect(onSkipReview).not.toHaveBeenCalled()
+    expect(result.current.state).toMatchObject({ phase: 'preview', busy: false })
+  })
+
+  it('shows the error, with a way to try again, when the sentences cannot be written', async () => {
+    const { result, failAll, answerAll, onSkipReview } = start()
+    act(() => result.current.choose(preset, noReview))
+    await act(async () => failAll('unavailable'))
+    expect(result.current.state).toMatchObject({ phase: 'preview', busy: false, error: 'unavailable' })
+    expect(onSkipReview).not.toHaveBeenCalled()
+
+    act(() => result.current.regenerate())
+    await act(async () => answerAll())
+    expect(onSkipReview).toHaveBeenCalledOnce()
+  })
+
+  it('hands over nothing when the host cancels', async () => {
+    const { result, answerAll, onSkipReview } = start()
+    act(() => result.current.choose(preset, noReview))
+    act(() => result.current.cancel())
+    await act(async () => answerAll())
+    expect(onSkipReview).not.toHaveBeenCalled()
     expect(result.current.state).toEqual({ phase: 'choosing' })
   })
 })
