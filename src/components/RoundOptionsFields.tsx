@@ -4,7 +4,7 @@ import { DIFFICULTIES, MAX_COUNT, MIN_COUNT, isDifficulty, type Difficulty, type
 interface RoundOptionsFieldsProps {
   options: RoundOptions
   onChange: (options: RoundOptions) => void
-  /** One player: the count is not per player, and translations are always on, so there is no switch. */
+  /** One player: the count is not per player. */
   solo?: boolean
   /** Explain each option under it. */
   withHelp?: boolean
@@ -14,23 +14,18 @@ const COUNTS = Array.from({ length: MAX_COUNT - MIN_COUNT + 1 }, (_, i) => MIN_C
 
 const DIFFICULTY_NAMES: Record<Difficulty, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard' }
 
-const HELP = {
-  count: 'How many sentences each of you reads aloud in a round, from 1 to 5.',
-  difficulty: 'Easy: short, present-tense sentences. Medium: everyday length. Hard: longer, with richer grammar.',
-  translate:
-    'After each turn the speaker can reveal the sentence in the language they are learning, on both screens, to check their answer.',
+const COUNT_HELP = 'How many sentences each of you reads aloud in a round, from 1 to 5.'
+
+const DIFFICULTY_HELP: Record<Difficulty, string> = {
+  easy: 'short sentences of 4 to 7 words, in the present tense, with everyday words.',
+  medium: 'everyday sentences of 4 to 12 words.',
+  hard: 'longer sentences of 8 to 11 words, with clauses, different tenses and less common words.',
 }
 
-/** The host's choices for a round: how many sentences, how hard, and whether translations are shown. */
+/** The host's choices for a round: how many sentences, and how hard. */
 export function RoundOptionsFields({ options, onChange, solo = false, withHelp = false }: RoundOptionsFieldsProps) {
   const id = useId()
-  const describedBy = (key: keyof typeof HELP) => (withHelp ? `${id}-${key}` : undefined)
-  const help = (key: keyof typeof HELP) =>
-    withHelp && (
-      <small id={`${id}-${key}`} className="help">
-        {HELP[key]}
-      </small>
-    )
+  const describedBy = (key: 'count' | 'difficulty') => (withHelp ? `${id}-${key}` : undefined)
 
   return (
     <fieldset className="round-options">
@@ -50,7 +45,11 @@ export function RoundOptionsFields({ options, onChange, solo = false, withHelp =
             ))}
           </select>
         </label>
-        {help('count')}
+        {withHelp && (
+          <small id={`${id}-count`} className="help">
+            {COUNT_HELP}
+          </small>
+        )}
       </div>
       <div className="field">
         <label>
@@ -67,22 +66,16 @@ export function RoundOptionsFields({ options, onChange, solo = false, withHelp =
             ))}
           </select>
         </label>
-        {help('difficulty')}
+        {withHelp && (
+          <ul id={`${id}-difficulty`} className="help help-levels">
+            {DIFFICULTIES.map((level) => (
+              <li key={level} data-selected={level === options.difficulty || undefined}>
+                <strong>{DIFFICULTY_NAMES[level]}:</strong> {DIFFICULTY_HELP[level]}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-      {!solo && (
-        <div className="field">
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={options.translate}
-              aria-describedby={describedBy('translate')}
-              onChange={(e) => onChange({ ...options, translate: e.target.checked })}
-            />
-            Show the translation after each turn
-          </label>
-          {help('translate')}
-        </div>
-      )}
     </fieldset>
   )
 }

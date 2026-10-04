@@ -39,7 +39,7 @@ export function HostSetup({ languages, topics, defaults, lastTopic, onCreate, on
     ["I'm learning", nameOf(learns)],
     [solo ? 'Sentences' : 'Sentences per player', String(options.count)],
     ['Difficulty', options.difficulty],
-    ['Translations', solo || options.translate ? 'shown after each turn' : 'hidden'],
+    ['Translations', 'shown after each turn'],
   ]
 
   return (
@@ -62,7 +62,7 @@ export function HostSetup({ languages, topics, defaults, lastTopic, onCreate, on
         type="button"
         className="primary"
         disabled={topic === null}
-        onClick={() => topic !== null && onCreate({ knows, learns, topic, options: solo ? { ...options, translate: true } : options })}
+        onClick={() => topic !== null && onCreate({ knows, learns, topic, options })}
       >
         {solo ? 'Start' : 'Create game'}
       </button>

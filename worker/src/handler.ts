@@ -54,13 +54,12 @@ const STYLE: Record<Difficulty, string> = {
   hard: 'challenging: 8 to 11 words long (never more than 11), with a subordinate clause, varied tenses and some less common vocabulary',
 }
 
-function systemPrompt({ language, count, translate, difficulty }: GenerateRequest): string {
+function systemPrompt({ language, count, difficulty }: GenerateRequest): string {
   const name = LANGUAGE_NAMES[language]
   const other = LANGUAGE_NAMES[language === 'de' ? 'en' : 'de']
-  const form = translate
-    ? `{"sentences": [{"text": "...", "translation": "..."}]} with exactly ${count} ${count === 1 ? 'item' : 'items'}. ` +
-      `"text" is a sentence written in ${name}; "translation" is the same sentence translated naturally and correctly into ${other}. `
-    : `{"sentences": ["..."]} with exactly ${count} ${count === 1 ? 'sentence' : 'sentences'}. `
+  const form =
+    `{"sentences": [{"text": "...", "translation": "..."}]} with exactly ${count} ${count === 1 ? 'item' : 'items'}. ` +
+    `"text" is a sentence written in ${name}; "translation" is the same sentence translated naturally and correctly into ${other}. `
   return (
     'You write short practice sentences for language learners. ' +
     `Reply with JSON only, in exactly this form: ${form}` +
@@ -89,7 +88,7 @@ function answerOf(output: unknown): unknown {
 const LOGGED_ANSWER_CHARACTERS = 300
 
 /** One line for the Worker's logs saying why an answer was thrown away. The custom topic is left out on purpose. */
-function logRejection({ language, count, translate, difficulty }: GenerateRequest, attempt: number, reason: string, answer: unknown) {
+function logRejection({ language, count, difficulty }: GenerateRequest, attempt: number, reason: string, answer: unknown) {
   const text = typeof answer === 'string' ? answer : JSON.stringify(answer)
   console.warn(
     JSON.stringify({
@@ -99,7 +98,6 @@ function logRejection({ language, count, translate, difficulty }: GenerateReques
       language,
       count,
       difficulty,
-      translate,
       answer: text?.slice(0, LOGGED_ANSWER_CHARACTERS),
     }),
   )
@@ -141,7 +139,7 @@ export function createHandler({ ai, kv, allowedOrigins, dailyCap = DEFAULT_DAILY
             { role: 'system', content: systemPrompt(request) },
             { role: 'user', content: userPrompt(request) },
           ],
-          max_tokens: 200 + request.count * (request.translate ? 100 : 50),
+          max_tokens: 200 + request.count * 100,
           temperature: 0.7,
         })
       } catch (error) {
@@ -149,31 +147,23 @@ export function createHandler({ ai, kv, allowedOrigins, dailyCap = DEFAULT_DAILY
       }
 
       const answer = answerOf(output)
-      if (request.translate) {
-        const parsed = parseTranslatedOutput(answer, request.language, request.count)
-        if (parsed.ok) return { sentences: parsed.sentences, translations: parsed.translations }
-        logRejection(request, attempt, parsed.reason, answer)
-      } else {
-        const parsed = parseModelOutput(answer, request.language, request.count)
-        if (parsed.ok) return { sentences: parsed.sentences }
-        logRejection(request, attempt, parsed.reason, answer)
-      }
+      const parsed = parseTranslatedOutput(answer, request.language, request.count)
+      if (parsed.ok) return { sentences: parsed.sentences, translations: parsed.translations }
+      logRejection(request, attempt, parsed.reason, answer)
     }
     return { error: 'invalid' }
   }
 
-  // Every combination of language, topic, number of sentences, difficulty and translations has its own stored batches.
-  const poolKey = ({ language, count, difficulty, translate }: GenerateRequest, id: string) =>
-    `pool:v4:${language}:${id}:${count}:${difficulty}:${translate ? 'translated' : 'plain'}`
+  // Every combination of language, topic, number of sentences, and difficulty has its own stored batches.
+  const poolKey = ({ language, count, difficulty }: GenerateRequest, id: string) =>
+    `pool:v5:${language}:${id}:${count}:${difficulty}`
 
   /** A stored batch, if it is still a valid answer to `request`. */
-  function validBatch(stored: unknown, { language, count, translate }: GenerateRequest): GeneratedSentences | null {
-    if (typeof stored !== 'object' || stored === null || !('sentences' in stored)) return null
+  function validBatch(stored: unknown, { language, count }: GenerateRequest): GeneratedSentences | null {
+    if (typeof stored !== 'object' || stored === null || !('sentences' in stored) || !('translations' in stored)) return null
     const sentences = parseModelOutput(stored.sentences, language, count)
-    if (!sentences.ok) return null
-    if (!translate) return { sentences: sentences.sentences }
-    const translations = 'translations' in stored ? parseModelOutput(stored.translations, language === 'de' ? 'en' : 'de', count) : null
-    return translations?.ok ? { sentences: sentences.sentences, translations: translations.sentences } : null
+    const translations = parseModelOutput(stored.translations, language === 'de' ? 'en' : 'de', count)
+    return sentences.ok && translations.ok ? { sentences: sentences.sentences, translations: translations.sentences } : null
   }
 
   /** Stored batches that are still valid; storage trouble or damaged data count as "none". */

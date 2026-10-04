@@ -28,8 +28,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         : { ...state, index: state.index + 1, revealed: false }
     }
     case 'REVEAL':
-      // Nothing to show when the host asked for no translations.
-      if (state.status === 'finished' || !state.turns[state.index].sentence.translation) return state
+      if (state.status === 'finished') return state
       return { ...state, revealed: true }
   }
 }

@@ -43,9 +43,9 @@ test('a preset topic is written by the AI, can be regenerated, and is played on 
   await playRound(game, second)
 })
 
-test('with translations on, both players see each translation after the speaker shows it, or the speaker skips it', async ({ browser }) => {
+test('both players see each translation after the speaker shows it, or the speaker skips it', async ({ browser }) => {
   let answered: Promise<unknown> = Promise.resolve()
-  const game = await startGame(browser, { translate: true }, (host) => {
+  const game = await startGame(browser, {}, (host) => {
     answered = workerAnswered(host)
   })
   const { host } = game

@@ -19,7 +19,6 @@ export function instantGenerator(language: Record<string, string[]> = answers) {
     generate: async (request) => {
       asked.push(request)
       const sentences = language[request.language].slice(0, request.count)
-      if (!request.translate) return { sentences }
       const other = request.language === 'de' ? 'en' : 'de'
       return { sentences, translations: language[other].slice(0, request.count) }
     },

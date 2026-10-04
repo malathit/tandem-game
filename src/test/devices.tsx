@@ -32,10 +32,9 @@ export interface HostChoices {
   topic?: string
   /** Typed instead of picking a preset. */
   customTopic?: string
-  /** These three are the host's saved settings. */
+  /** These two are the host's saved settings. */
   count?: number
   difficulty?: Difficulty
-  translate?: boolean
 }
 
 /** Picks the topic on the "Create a game" screen, which shows the saved settings. */
@@ -58,11 +57,10 @@ export async function createGame(
   generator: SentenceGenerator | null = instantGenerator().generator,
   choices: HostChoices = {},
 ) {
-  const { count, difficulty, translate } = choices
+  const { count, difficulty } = choices
   const options = {
     count: count ?? DEFAULT_ROUND_OPTIONS.count,
     difficulty: difficulty ?? DEFAULT_ROUND_OPTIONS.difficulty,
-    translate: translate ?? DEFAULT_ROUND_OPTIONS.translate,
   }
   const device = open(network, generator ?? undefined, { ...SAVED_DEFAULTS, options })
   await user.click(device.ui.getByRole('button', { name: '2 players' }))

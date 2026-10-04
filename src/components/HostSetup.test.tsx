@@ -10,7 +10,7 @@ const topics = [
   { id: 'greetings', name: 'Greetings and small talk' },
   { id: 'weather', name: 'Weather' },
 ]
-const defaults: HostDefaults = { knows: 'de', learns: 'en', options: { count: 4, translate: true, difficulty: 'hard' } }
+const defaults: HostDefaults = { knows: 'de', learns: 'en', options: { count: 4, difficulty: 'hard' } }
 
 function setup(props: { lastTopic?: string | null; solo?: boolean; defaults?: HostDefaults } = {}) {
   const onCreate = vi.fn()
@@ -41,11 +41,6 @@ describe('HostSetup', () => {
     expect(summary).toHaveTextContent(/Sentences per player4/)
     expect(summary).toHaveTextContent(/Difficultyhard/)
     expect(summary).toHaveTextContent(/Translationsshown after each turn/)
-  })
-
-  it('says translations are hidden when they are off', () => {
-    setup({ defaults: { ...defaults, options: { ...defaults.options, translate: false } } })
-    expect(screen.getByText('hidden')).toBeInTheDocument()
   })
 
   it('creates the game from the saved settings and the last topic', async () => {
@@ -113,19 +108,14 @@ describe('HostSetup', () => {
 })
 
 describe('HostSetup for one player', () => {
-  it('is about practising alone, and always asks for translations whatever was saved', async () => {
-    const { user, create, onCreate } = setup({
-      solo: true,
-      defaults: { ...defaults, options: { ...defaults.options, translate: false } },
-    })
+  it('is about practising alone', async () => {
+    const { user, create, onCreate } = setup({ solo: true })
     expect(screen.getByRole('heading', { name: 'Practise on your own' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Create game' })).not.toBeInTheDocument()
     expect(screen.getByText('Sentences')).toBeInTheDocument()
     expect(screen.getByText('shown after each turn')).toBeInTheDocument()
     await user.click(create)
-    expect(onCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ learns: 'en', options: expect.objectContaining({ translate: true }) }),
-    )
+    expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ learns: 'en' }))
   })
 
   it('says what is missing in its own words', () => {

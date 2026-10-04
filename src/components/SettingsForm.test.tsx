@@ -40,17 +40,16 @@ describe('SettingsForm', () => {
   })
 
   it('starts from what is saved and saves the changes', async () => {
-    const { user, onSave } = setup({ knows: 'de', learns: 'en', options: { count: 3, translate: false, difficulty: 'easy' } })
+    const { user, onSave } = setup({ knows: 'de', learns: 'en', options: { count: 3, difficulty: 'easy' } })
     expect(screen.getByLabelText('I speak')).toHaveValue('de')
     expect(screen.getByLabelText("I'm learning")).toHaveValue('en')
     expect(screen.getByLabelText('Sentences per player')).toHaveValue('3')
     await user.selectOptions(screen.getByLabelText('Difficulty'), 'hard')
-    await user.click(screen.getByLabelText('Show the translation after each turn'))
     await user.click(screen.getByRole('button', { name: 'Save settings' }))
     expect(onSave).toHaveBeenCalledExactlyOnceWith({
       knows: 'de',
       learns: 'en',
-      options: { count: 3, translate: true, difficulty: 'hard' },
+      options: { count: 3, difficulty: 'hard' },
     })
   })
 
@@ -59,8 +58,7 @@ describe('SettingsForm', () => {
     expect(screen.getByLabelText('I speak')).toHaveAccessibleDescription(/your sentences are written in/i)
     expect(screen.getByLabelText("I'm learning")).toHaveAccessibleDescription(/the language your partner speaks/i)
     expect(screen.getByLabelText('Sentences per player')).toHaveAccessibleDescription(/reads aloud in a round/i)
-    expect(screen.getByLabelText('Difficulty')).toHaveAccessibleDescription(/Easy: .*Medium: .*Hard: /)
-    expect(screen.getByLabelText('Show the translation after each turn')).toHaveAccessibleDescription(/check their answer/i)
+    expect(screen.getByLabelText('Difficulty')).toHaveAccessibleDescription(/Easy: .*4 to 7 words.*Medium: .*Hard: .*8 to 11 words/)
   })
 
   it('goes back without saving, when there is somewhere to go back to', async () => {

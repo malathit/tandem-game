@@ -359,6 +359,25 @@ progress {
   font-weight: 400;
 }
 
+.help-levels {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.help-levels li {
+  padding: 0.25rem 0.5rem;
+  border-left: 3px solid transparent;
+}
+
+/* The level the host has chosen stands out from the other two. */
+.help-levels li[data-selected] {
+  border-left-color: var(--accent);
+  color: var(--text);
+}
+
 label.check {
   display: flex;
   align-items: center;

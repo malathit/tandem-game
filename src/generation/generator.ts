@@ -1,7 +1,7 @@
 import type { LanguageCode, LanguagePair, Sentence } from '../content/types'
 import type { SentencesByLanguage } from '../game/buildTurns'
 import type { GenerateRequest, GenerateTopic, GeneratedSentences, GenerationErrorKind, RoundOptions } from './types'
-import { parseModelOutput, parseTranslatedOutput } from './validate'
+import { parseTranslatedOutput } from './validate'
 
 const DEFAULT_TIMEOUT_MS = 20_000
 /** A real answer is at most a few thousand characters (5 sentences with translations); anything far bigger is not from our Worker. */
@@ -44,13 +44,8 @@ function failureKind(status: number, text: string): GenerationErrorKind {
   return 'unavailable'
 }
 
-/** Re-checks an answer with the same rules as the Worker; a translated answer must carry its translations. */
-function checked(body: Record<string, unknown>, { language, count, translate }: GenerateRequest): GeneratedSentences {
-  if (!translate) {
-    const parsed = parseModelOutput(body.sentences, language, count)
-    if (!parsed.ok) throw new GenerationError('invalid')
-    return { sentences: parsed.sentences }
-  }
+/** Re-checks an answer with the same rules as the Worker; it must carry the translations. */
+function checked(body: Record<string, unknown>, { language, count }: GenerateRequest): GeneratedSentences {
   const { sentences, translations } = body
   if (!Array.isArray(sentences) || !Array.isArray(translations)) throw new GenerationError('invalid')
   const pairs = sentences.map((text, i) => ({ text, translation: translations[i] }))
@@ -122,7 +117,7 @@ export async function generateForLanguage(
   return sentences.map((text, i) => ({
     id: `ai-${language}-${i + 1}`,
     text,
-    ...(translations && { translation: translations[i] }),
+    translation: translations[i],
   }))
 }
 

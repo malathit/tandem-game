@@ -3,7 +3,7 @@ import type { Sentence } from '../content/types'
 import { buildSoloTurns, buildTurns } from './buildTurns'
 
 const make = (prefix: string, count: number): Sentence[] =>
-  Array.from({ length: count }, (_, i) => ({ id: `${prefix}${i + 1}`, text: `${prefix} ${i + 1}` }))
+  Array.from({ length: count }, (_, i) => ({ id: `${prefix}${i + 1}`, text: `${prefix} ${i + 1}`, translation: `${prefix} ${i + 1} translated` }))
 
 const sentences = {
   en: Object.freeze(make('en', 4)) as Sentence[],
@@ -25,8 +25,8 @@ describe('buildTurns', () => {
   it('shows each player sentences in their native language and tells them what to translate into', () => {
     const [first, second] = buildTurns(pair, sentences, 2, keepOrder)
     // Player 1 learns English, so they read German and translate into English.
-    expect(first).toEqual({ player: 1, sentence: { id: 'de1', text: 'de 1' }, learning: 'en' })
-    expect(second).toEqual({ player: 2, sentence: { id: 'en1', text: 'en 1' }, learning: 'de' })
+    expect(first).toEqual({ player: 1, sentence: { id: 'de1', text: 'de 1', translation: 'de 1 translated' }, learning: 'en' })
+    expect(second).toEqual({ player: 2, sentence: { id: 'en1', text: 'en 1', translation: 'en 1 translated' }, learning: 'de' })
   })
 
   it('uses the shuffle it is given to choose and order the sentences', () => {
@@ -74,9 +74,9 @@ describe('buildSoloTurns', () => {
   it('gives every turn to Player 1, reading the native language and translating into the one being learned', () => {
     const turns = buildSoloTurns('en', sentences.de, 3, keepOrder)
     expect(turns).toEqual([
-      { player: 1, sentence: { id: 'de1', text: 'de 1' }, learning: 'en' },
-      { player: 1, sentence: { id: 'de2', text: 'de 2' }, learning: 'en' },
-      { player: 1, sentence: { id: 'de3', text: 'de 3' }, learning: 'en' },
+      { player: 1, sentence: { id: 'de1', text: 'de 1', translation: 'de 1 translated' }, learning: 'en' },
+      { player: 1, sentence: { id: 'de2', text: 'de 2', translation: 'de 2 translated' }, learning: 'en' },
+      { player: 1, sentence: { id: 'de3', text: 'de 3', translation: 'de 3 translated' }, learning: 'en' },
     ])
   })
 

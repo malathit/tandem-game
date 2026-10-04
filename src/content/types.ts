@@ -18,8 +18,8 @@ export interface Topic {
 export interface Sentence {
   id: string
   text: string
-  /** The same sentence in the language the speaker translates into, when the host asked for it. */
-  translation?: string
+  /** The same sentence in the language the speaker translates into. */
+  translation: string
 }
 
 export type LanguagePair = readonly [LanguageCode, LanguageCode]

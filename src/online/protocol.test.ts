@@ -9,8 +9,8 @@ const roomState: RoomState = {
     topic: 'modal-verbs',
     game: {
       turns: [
-        { player: 1, sentence: { id: 'a', text: 'Ich kann schwimmen.' }, learning: 'en' },
-        { player: 2, sentence: { id: 'b', text: 'I can swim.' }, learning: 'de' },
+        { player: 1, sentence: { id: 'a', text: 'Ich kann schwimmen.', translation: 'I can swim.' }, learning: 'en' },
+        { player: 2, sentence: { id: 'b', text: 'I can swim.', translation: 'Ich kann schwimmen.' }, learning: 'de' },
       ],
       index: 1,
       status: 'playing',
@@ -71,9 +71,9 @@ describe('parseHostMessage', () => {
   })
 
   it('drops unexpected fields from a sentence', () => {
-    const turn = { player: 1, sentence: { id: 'a', text: 'x', answer: 'y' }, learning: 'en' }
+    const turn = { player: 1, sentence: { id: 'a', text: 'x', translation: 'y', answer: 'z' }, learning: 'en' }
     const parsed = parseHostMessage({ type: 'state', state: withRound({ turns: [turn], index: 0 }) })
-    expect(parsed?.state.round?.game.turns[0].sentence).toEqual({ id: 'a', text: 'x' })
+    expect(parsed?.state.round?.game.turns[0].sentence).toEqual({ id: 'a', text: 'x', translation: 'y' })
   })
 
   it('accepts a lobby state with no guest and no round', () => {
@@ -87,7 +87,7 @@ describe('parseHostMessage', () => {
   })
 
   describe('a review', () => {
-    const turn = { player: 1, sentence: { id: 'a', text: 'Ich kann schwimmen.' }, learning: 'en' }
+    const turn = { player: 1, sentence: { id: 'a', text: 'Ich kann schwimmen.', translation: 'I can swim.' }, learning: 'en' }
     const review = { topic: 'greetings', turns: [turn], busy: false, error: null, confirmed: [true, false] }
     const reviewing = (change: Record<string, unknown>) => ({ ...roomState, review: { ...review, ...change } })
 
@@ -133,6 +133,7 @@ describe('parseHostMessage', () => {
     ['a very long sentence', withRound({ turns: [{ player: 1, sentence: { id: 'a', text: 'x'.repeat(301) }, learning: 'en' }], index: 0 })],
     ['a game without its reveal flag', withRound({ revealed: undefined })],
     ['a reveal flag that is not a boolean', withRound({ revealed: 'yes' })],
+    ['a sentence without a translation', withRound({ turns: [{ player: 1, sentence: { id: 'a', text: 'x' }, learning: 'en' }], index: 0 })],
     ['a translation that is not text', withRound({ turns: [{ player: 1, sentence: { id: 'a', text: 'x', translation: 5 }, learning: 'en' }], index: 0 })],
     ['a very long translation', withRound({ turns: [{ player: 1, sentence: { id: 'a', text: 'x', translation: 'x'.repeat(301) }, learning: 'en' }], index: 0 })],
     ['too many turns', withRound({ turns: Array.from({ length: 21 }, () => ({ player: 1, sentence: { id: 'a', text: 'x' }, learning: 'en' })), index: 0 })],

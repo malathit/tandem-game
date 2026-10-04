@@ -71,7 +71,7 @@ describe('playing alone', () => {
     await user.click(ui.getByRole('button', { name: 'Finish round' }))
     expect(ui.getByRole('heading', { name: 'Round complete' })).toBeInTheDocument()
     expect(asked).toHaveLength(1)
-    expect(asked[0]).toMatchObject({ language: 'de', translate: true, topic: { kind: 'preset', id: 'weather' } })
+    expect(asked[0]).toMatchObject({ language: 'de', topic: { kind: 'preset', id: 'weather' } })
 
     await user.click(ui.getByRole('button', { name: 'Leave' }))
     expect(ui.getByRole('button', { name: '1 player' })).toBeInTheDocument()

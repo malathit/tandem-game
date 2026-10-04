@@ -7,7 +7,7 @@ import { SAVED_DEFAULTS, languages, open } from '../test/devices'
 import { instantGenerator } from '../test/generators'
 import { createMemoryNetwork } from '../test/memoryNetwork'
 
-const saved = { knows: 'de', learns: 'en', options: { count: 3, translate: true, difficulty: 'hard' } } as const
+const saved = { knows: 'de', learns: 'en', options: { count: 3, difficulty: 'hard' } } as const
 
 describe('the first visit', () => {
   it('asks for the settings first, with nothing to go back to, and saves them', async () => {
@@ -21,7 +21,6 @@ describe('the first visit', () => {
     await user.selectOptions(ui.getByLabelText("I'm learning"), 'en')
     await user.selectOptions(ui.getByLabelText('Sentences per player'), '3')
     await user.selectOptions(ui.getByLabelText('Difficulty'), 'hard')
-    await user.click(ui.getByLabelText('Show the translation after each turn'))
     await user.click(ui.getByRole('button', { name: 'Save settings' }))
 
     expect(loadHostDefaults()).toEqual(saved)
@@ -67,7 +66,6 @@ describe('creating a game from the saved settings', () => {
       language: 'de',
       count: 3,
       difficulty: 'hard',
-      translate: true,
       topic: { kind: 'preset', id: 'weather' },
     })
   })

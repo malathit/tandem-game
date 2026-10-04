@@ -15,8 +15,8 @@ const languages: Language[] = [
 const turns: Turn[] = [
   { player: 1, sentence: { id: 'a', text: 'Ich kann gut schwimmen.', translation: 'I can swim well.' }, learning: 'en' },
   { player: 2, sentence: { id: 'b', text: 'She can swim very well.', translation: 'Sie kann gut schwimmen.' }, learning: 'de' },
-  { player: 1, sentence: { id: 'c', text: 'Wir gehen ins Kino.' }, learning: 'en' },
-  { player: 2, sentence: { id: 'd', text: 'They like the cinema.' }, learning: 'de' },
+  { player: 1, sentence: { id: 'c', text: 'Wir gehen ins Kino.', translation: 'We are going to the cinema.' }, learning: 'en' },
+  { player: 2, sentence: { id: 'd', text: 'They like the cinema.', translation: 'Sie mögen das Kino.' }, learning: 'de' },
 ]
 
 type Review = Pick<ReviewState, 'turns' | 'busy' | 'error' | 'confirmed'>

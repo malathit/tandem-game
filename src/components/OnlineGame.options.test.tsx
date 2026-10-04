@@ -38,12 +38,11 @@ describe('round options', () => {
     expect(asked.every((request) => request.difficulty === 'easy' && request.topic.kind === 'preset')).toBe(true)
   })
 
-  it('plays two sentences each, at medium difficulty, without translations, unless the host chooses otherwise', async () => {
+  it('plays two sentences each, at medium difficulty, unless the host chooses otherwise', async () => {
     const { user, host, guest, asked } = await start()
-    expect(asked.every((request) => request.count === 2 && !request.translate && request.difficulty === 'medium')).toBe(true)
+    expect(asked.every((request) => request.count === 2 && request.difficulty === 'medium')).toBe(true)
     await confirmSentences(host, guest, user)
     await host.ui.findByText('Turn 1 of 4')
-    expect(host.ui.queryByRole('button', { name: 'Show translation' })).not.toBeInTheDocument()
   })
 
   it('plays as many turns as the host chose', async () => {
@@ -57,12 +56,9 @@ describe('round options', () => {
     await guest.ui.findByText('Turn 1 of 10')
   })
 
-  describe('with translations', () => {
-    const startTranslated = () => start({ translate: true })
-
-    it('keeps the translations out of the review, which is only about the sentences each player reads', async () => {
-      const { host, guest, asked } = await startTranslated()
-      expect(asked.every((request) => request.translate)).toBe(true)
+  describe('translations', () => {
+    it('keep out of the review, which is only about the sentences each player reads', async () => {
+      const { host, guest } = await start()
       // The host reads German, so what they review is German; the English translations stay hidden.
       for (const sentence of english.slice(0, 2)) expect(host.ui.queryByText(sentence)).not.toBeInTheDocument()
       await waitFor(() => expect(guest.container.querySelectorAll('.preview-list li')).toHaveLength(2))
@@ -70,7 +66,7 @@ describe('round options', () => {
     })
 
     it('hides it from both players until the speaker shows it, then moves on', async () => {
-      const { user, host, guest } = await startTranslated()
+      const { user, host, guest } = await start()
       await confirmSentences(host, guest, user)
       await host.ui.findByText('Turn 1 of 4')
       await guest.ui.findByText('Turn 1 of 4')
@@ -98,7 +94,7 @@ describe('round options', () => {
     })
 
     it('lets a speaker skip the translation and go straight to the next turn, on both devices', async () => {
-      const { user, host, guest } = await startTranslated()
+      const { user, host, guest } = await start()
       await confirmSentences(host, guest, user)
       await host.ui.findByText('Turn 1 of 4')
 
@@ -115,7 +111,7 @@ describe('round options', () => {
     })
 
     it('can skip the translation on the last turn to finish the round', async () => {
-      const { user, host, guest } = await startTranslated()
+      const { user, host, guest } = await start()
       await confirmSentences(host, guest, user)
       for (const device of [host, guest, host]) {
         await user.click(await device.ui.findByRole('button', { name: 'Next turn' }))
@@ -127,7 +123,7 @@ describe('round options', () => {
     })
 
     it('lets the guest show the translation on their own turn', async () => {
-      const { user, host, guest } = await startTranslated()
+      const { user, host, guest } = await start()
       await confirmSentences(host, guest, user)
       await host.ui.findByText('Turn 1 of 4')
       await user.click(host.ui.getByRole('button', { name: 'Show translation' }))
@@ -141,7 +137,7 @@ describe('round options', () => {
     })
 
     it('plays a whole round, showing each translation first, and keeps the options for Play again', async () => {
-      const { user, host, guest, asked } = await startTranslated()
+      const { user, host, guest, asked } = await start()
       await confirmSentences(host, guest, user)
       await host.ui.findByText('Turn 1 of 4')
       for (const device of [host, guest, host, guest]) {
@@ -156,7 +152,7 @@ describe('round options', () => {
       await user.click(host.ui.getByRole('button', { name: 'Play again' }))
       await host.ui.findByRole('heading', { name: 'Review your sentences' })
       await waitFor(() => expect(asked).toHaveLength(2))
-      expect(asked.every((request) => request.translate && request.count === 2 && request.fresh === false)).toBe(true)
+      expect(asked.every((request) => request.count === 2 && request.fresh === false)).toBe(true)
     })
   })
 })

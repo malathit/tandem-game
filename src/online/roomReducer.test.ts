@@ -3,8 +3,8 @@ import type { Turn } from '../game/buildTurns'
 import { createRoom, roomReducer } from './roomReducer'
 
 const turns: Turn[] = [
-  { player: 1, sentence: { id: 'a', text: 'a' }, learning: 'en' },
-  { player: 2, sentence: { id: 'b', text: 'b' }, learning: 'de' },
+  { player: 1, sentence: { id: 'a', text: 'a', translation: 'a!' }, learning: 'en' },
+  { player: 2, sentence: { id: 'b', text: 'b', translation: 'b!' }, learning: 'de' },
 ]
 
 const joined = roomReducer(createRoom('en'), { type: 'GUEST_HELLO', knows: 'de' })
@@ -107,25 +107,22 @@ describe('CHANGE_TOPIC', () => {
 })
 
 describe('REVEAL', () => {
-  const translated = turns.map((turn) => ({ ...turn, sentence: { ...turn.sentence, translation: `${turn.sentence.text}!` } }))
-  const withTranslations = roomReducer(joined, { type: 'START_ROUND', topic: 'weather', turns: translated })
   const revealed = (room: typeof joined) => room.round?.game.revealed
 
   it('shows the translation when the player whose turn it is asks', () => {
-    expect(revealed(roomReducer(withTranslations, { type: 'REVEAL', from: 1 }))).toBe(true)
+    expect(revealed(roomReducer(playing, { type: 'REVEAL', from: 1 }))).toBe(true)
   })
 
   it("ignores the other player's request", () => {
-    expect(roomReducer(withTranslations, { type: 'REVEAL', from: 2 })).toBe(withTranslations)
+    expect(roomReducer(playing, { type: 'REVEAL', from: 2 })).toBe(playing)
   })
 
-  it('ignores a request when there is no round or no translation', () => {
+  it('ignores a request when there is no round', () => {
     expect(roomReducer(joined, { type: 'REVEAL', from: 1 })).toBe(joined)
-    expect(revealed(roomReducer(playing, { type: 'REVEAL', from: 1 }))).toBe(false)
   })
 
   it('hides it again when the game moves on', () => {
-    const shown = roomReducer(withTranslations, { type: 'REVEAL', from: 1 })
+    const shown = roomReducer(playing, { type: 'REVEAL', from: 1 })
     expect(revealed(roomReducer(shown, { type: 'NEXT_TURN', from: 1 }))).toBe(false)
   })
 })

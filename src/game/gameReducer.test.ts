@@ -3,9 +3,9 @@ import { createGame, gameReducer } from './gameReducer'
 import type { Turn } from './buildTurns'
 
 const turns: Turn[] = [
-  { player: 1, sentence: { id: 'a', text: 'a' }, learning: 'en' },
-  { player: 2, sentence: { id: 'b', text: 'b' }, learning: 'de' },
-  { player: 1, sentence: { id: 'c', text: 'c' }, learning: 'en' },
+  { player: 1, sentence: { id: 'a', text: 'a', translation: 'a!' }, learning: 'en' },
+  { player: 2, sentence: { id: 'b', text: 'b', translation: 'b!' }, learning: 'de' },
+  { player: 1, sentence: { id: 'c', text: 'c', translation: 'c!' }, learning: 'en' },
 ]
 
 describe('createGame', () => {
@@ -46,14 +46,12 @@ describe('gameReducer', () => {
 })
 
 describe('revealing the translation', () => {
-  const translated: Turn[] = turns.map((turn) => ({ ...turn, sentence: { ...turn.sentence, translation: `${turn.sentence.text}!` } }))
-
   it('shows the translation of the current turn', () => {
-    expect(gameReducer(createGame(translated), { type: 'REVEAL' }).revealed).toBe(true)
+    expect(gameReducer(createGame(turns), { type: 'REVEAL' }).revealed).toBe(true)
   })
 
   it('hides it again on the next turn, and when the round ends', () => {
-    let state = gameReducer(createGame(translated), { type: 'REVEAL' })
+    let state = gameReducer(createGame(turns), { type: 'REVEAL' })
     state = gameReducer(state, { type: 'NEXT_TURN' })
     expect(state).toMatchObject({ index: 1, revealed: false })
     state = gameReducer(gameReducer(state, { type: 'REVEAL' }), { type: 'NEXT_TURN' })
@@ -61,13 +59,8 @@ describe('revealing the translation', () => {
     expect(state).toMatchObject({ status: 'finished', revealed: false })
   })
 
-  it('does nothing when the turn has no translation', () => {
-    const state = createGame(turns)
-    expect(gameReducer(state, { type: 'REVEAL' })).toBe(state)
-  })
-
   it('does nothing once the game is finished', () => {
-    const finished = { turns: translated, index: 2, status: 'finished', revealed: false } as const
+    const finished = { turns, index: 2, status: 'finished', revealed: false } as const
     expect(gameReducer(finished, { type: 'REVEAL' })).toBe(finished)
   })
 })

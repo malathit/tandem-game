@@ -34,10 +34,10 @@ function write(key: string, value: string) {
 
 function parseOptions(value: unknown): RoundOptions | null {
   if (typeof value !== 'object' || value === null) return null
-  const { count, translate, difficulty } = value as Record<string, unknown>
+  const { count, difficulty } = value as Record<string, unknown>
   if (typeof count !== 'number' || !Number.isInteger(count) || count < MIN_COUNT || count > MAX_COUNT) return null
-  if (typeof translate !== 'boolean' || !isDifficulty(difficulty)) return null
-  return { count, translate, difficulty }
+  if (!isDifficulty(difficulty)) return null
+  return { count, difficulty }
 }
 
 export function loadHostDefaults(): HostDefaults | null {

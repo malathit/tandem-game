@@ -19,35 +19,21 @@ describe.skipIf(!url)('the real Worker', () => {
     return generator
   }
 
-  it('generates sentences for a preset topic in one language', async () => {
-    const answer = await live().generate({
-      language: 'de',
-      topic: { kind: 'preset', id: 'weather' },
-      fresh: false,
-      count: 2,
-      translate: false,
-      difficulty: 'medium',
-    })
-    console.log('preset (de):', answer)
-    expect(answer.sentences).toHaveLength(2)
-  }, 30_000)
-
   it('generates sentences with translations, in the number the host chose', async () => {
     const answer = await live().generate({
       language: 'de',
       topic: { kind: 'preset', id: 'weather' },
       fresh: true,
       count: 3,
-      translate: true,
       difficulty: 'medium',
     })
-    console.log('translated (de):', answer)
+    console.log('preset (de):', answer)
     expect(answer.sentences).toHaveLength(3)
     expect(answer.translations).toHaveLength(3)
   }, 30_000)
 
   it('generates both languages of a round for a custom topic', async () => {
-    const options: RoundOptions = { count: 2, translate: false, difficulty: 'medium' }
+    const options: RoundOptions = { count: 2, difficulty: 'medium' }
     const result = await generateForPair(live(), ['en', 'de'], { kind: 'custom', text: 'a rainy day at the beach' }, false, options)
     console.log('custom round:', result)
     expect(result.de).toHaveLength(2)
@@ -56,7 +42,7 @@ describe.skipIf(!url)('the real Worker', () => {
 
   it('refuses an invalid request without spending the AI', async () => {
     await expect(
-      live().generate({ language: 'de', topic: { kind: 'custom', text: 'x'.repeat(61) }, fresh: false, count: 2, translate: false, difficulty: 'medium' }),
+      live().generate({ language: 'de', topic: { kind: 'custom', text: 'x'.repeat(61) }, fresh: false, count: 2, difficulty: 'medium' }),
     ).rejects.toMatchObject({ kind: 'invalid' })
   }, 30_000)
 })

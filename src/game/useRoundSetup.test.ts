@@ -26,7 +26,7 @@ function manualGenerator() {
       }),
   }
   const answerAll = (lang: Record<string, string[]> = { de: german, en: english }) => {
-    for (const p of pending.splice(0)) p.resolve({ sentences: lang[p.request.language] })
+    for (const p of pending.splice(0)) p.resolve({ sentences: lang[p.request.language], translations: lang[p.request.language === 'de' ? 'en' : 'de'] })
   }
   const failAll = (kind: GenerationErrorKind) => {
     for (const p of pending.splice(0)) p.reject(new GenerationError(kind))
@@ -106,21 +106,21 @@ describe('useRoundSetup', () => {
   describe('round options', () => {
     it('asks for the chosen number of sentences and translations, and builds that many turns', async () => {
       const { result, pending } = start()
-      act(() => result.current.choose(preset, { count: 1, translate: true, difficulty: 'medium' }))
+      act(() => result.current.choose(preset, { count: 1, difficulty: 'medium' }))
       expect(pending.map((p) => p.request)).toEqual(
-        expect.arrayContaining([expect.objectContaining({ count: 1, translate: true, difficulty: 'medium' })]),
+        expect.arrayContaining([expect.objectContaining({ count: 1, difficulty: 'medium' })]),
       )
       act(() => {
-        for (const p of pending.splice(0)) p.resolve({ sentences: [(p.request.language === 'de' ? german : english)[0]] })
+        for (const p of pending.splice(0)) p.resolve({ sentences: [(p.request.language === 'de' ? german : english)[0]], translations: [(p.request.language === 'de' ? english : german)[0]] })
       })
       await waitFor(() => expect(result.current.state).toMatchObject({ busy: false }))
-      expect(result.current.state).toMatchObject({ options: { count: 1, translate: true, difficulty: 'medium' } })
+      expect(result.current.state).toMatchObject({ options: { count: 1, difficulty: 'medium' } })
       expect(result.current.state.phase === 'preview' && result.current.state.turns).toHaveLength(2)
     })
 
     it('keeps the options, difficulty included, when it asks for new sentences', async () => {
       const { result, pending } = start()
-      act(() => result.current.choose(preset, { count: 3, translate: false, difficulty: 'hard' }))
+      act(() => result.current.choose(preset, { count: 3, difficulty: 'hard' }))
       act(() => pending.splice(0).forEach((p) => p.reject(new GenerationError('unavailable'))))
       await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, error: 'unavailable' }))
       act(() => result.current.regenerate())
@@ -139,8 +139,8 @@ describe('useRoundSetup', () => {
       expect(result.current.state).toMatchObject({ phase: 'preview', busy: true, turns: before })
       expect(pending.map((p) => p.request)).toEqual(
         expect.arrayContaining([
-          { language: 'de', topic: { kind: 'preset', id: preset }, fresh: true, count: 2, translate: false, difficulty: 'medium' },
-          { language: 'en', topic: { kind: 'preset', id: preset }, fresh: true, count: 2, translate: false, difficulty: 'medium' },
+          { language: 'de', topic: { kind: 'preset', id: preset }, fresh: true, count: 2, difficulty: 'medium' },
+          { language: 'en', topic: { kind: 'preset', id: preset }, fresh: true, count: 2, difficulty: 'medium' },
         ]),
       )
 
@@ -288,7 +288,7 @@ describe('useRoundSetup', () => {
 describe('useRoundSetup for one player', () => {
   // The player speaks German and learns English: [what they learn, what they speak].
   const solo = ['en', 'de'] as const
-  const options = { count: 2, translate: true, difficulty: 'medium' } as const
+  const options = { count: 2, difficulty: 'medium' } as const
 
   function startSolo() {
     const manual = manualGenerator()

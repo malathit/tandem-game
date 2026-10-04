@@ -20,7 +20,6 @@ export interface Settings {
   customTopic?: string
   count?: number
   difficulty?: 'easy' | 'medium' | 'hard'
-  translate?: boolean
 }
 
 /**
@@ -32,7 +31,6 @@ export async function saveSettings(page: Page, settings: Settings = {}) {
   await page.getByLabel("I'm learning").selectOption('en')
   if (settings.count !== undefined) await page.getByLabel(/^Sentences/).selectOption(String(settings.count))
   if (settings.difficulty !== undefined) await page.getByLabel('Difficulty').selectOption(settings.difficulty)
-  if (settings.translate) await page.getByLabel('Show the translation after each turn').check()
   await page.getByRole('button', { name: 'Save settings' }).click()
 }
 

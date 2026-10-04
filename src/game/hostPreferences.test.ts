@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadHostDefaults, loadLastTopic, saveHostDefaults, saveLastTopic } from './hostPreferences'
 
-const defaults = { knows: 'de', learns: 'en', options: { count: 4, translate: true, difficulty: 'hard' } } as const
+const defaults = { knows: 'de', learns: 'en', options: { count: 4, difficulty: 'hard' } } as const
 
 beforeEach(() => localStorage.clear())
 afterEach(() => vi.restoreAllMocks())
@@ -13,6 +13,11 @@ describe('host defaults', () => {
 
   it('round-trip', () => {
     saveHostDefaults(defaults)
+    expect(loadHostDefaults()).toEqual(defaults)
+  })
+
+  it('saved before translations became automatic still load, without the old flag', () => {
+    localStorage.setItem('tandem.hostDefaults.v2', JSON.stringify({ ...defaults, options: { ...defaults.options, translate: false } }))
     expect(loadHostDefaults()).toEqual(defaults)
   })
 
@@ -28,7 +33,6 @@ describe('host defaults', () => {
     ['a count above the maximum', JSON.stringify({ ...defaults, options: { ...defaults.options, count: 6 } })],
     ['a fractional count', JSON.stringify({ ...defaults, options: { ...defaults.options, count: 2.5 } })],
     ['an unknown difficulty', JSON.stringify({ ...defaults, options: { ...defaults.options, difficulty: 'insane' } })],
-    ['a non-boolean translate', JSON.stringify({ ...defaults, options: { ...defaults.options, translate: 'yes' } })],
     ['missing options', JSON.stringify({ knows: 'en' })],
   ])('are ignored when the stored value is %s', (_, stored) => {
     localStorage.setItem('tandem.hostDefaults.v2', stored)

@@ -51,18 +51,12 @@ function parseTurn(raw: unknown): Turn | null {
     return null
   }
   const { sentence } = raw
-  if (!isRecord(sentence) || !isText(sentence.id) || !isText(sentence.text)) {
+  if (!isRecord(sentence) || !isText(sentence.id) || !isText(sentence.text) || !isText(sentence.translation)) {
     return null
   }
-  // The translation is optional, but if it is there it has to be real text.
-  if (sentence.translation !== undefined && !isText(sentence.translation)) return null
   return {
     player: raw.player,
-    sentence: {
-      id: sentence.id,
-      text: sentence.text,
-      ...(sentence.translation !== undefined && { translation: sentence.translation }),
-    },
+    sentence: { id: sentence.id, text: sentence.text, translation: sentence.translation },
     learning: raw.learning,
   }
 }

@@ -7,7 +7,7 @@ import { languages } from '../test/devices'
 import { english, german, instantGenerator } from '../test/generators'
 import { SoloGame } from './SoloGame'
 
-const options: RoundOptions = { count: 2, translate: true, difficulty: 'hard' }
+const options: RoundOptions = { count: 2, difficulty: 'hard' }
 // A German speaker who is learning English.
 const settings = { knows: 'de', learns: 'en', topic: 'greetings', options } as const
 
@@ -65,7 +65,7 @@ describe('SoloGame', () => {
     await user.click(ui.getByRole('button', { name: 'Play again' }))
     await ui.findByRole('heading', { name: 'Review your sentences' })
     expect(asked).toHaveLength(2)
-    expect(asked[1]).toMatchObject({ language: 'de', topic: { kind: 'preset', id: 'greetings' }, translate: true })
+    expect(asked[1]).toMatchObject({ language: 'de', topic: { kind: 'preset', id: 'greetings' }, })
   })
 
   it('goes back to the topics with Change topic, keeping the options, and plays the new topic', async () => {
@@ -80,7 +80,7 @@ describe('SoloGame', () => {
     await user.type(ui.getByLabelText('Or enter your own topic'), 'my pet dragon')
     await user.click(ui.getByRole('button', { name: 'Use this topic' }))
     await ui.findByRole('heading', { name: 'Review your sentences' })
-    expect(asked[1]).toMatchObject({ topic: { kind: 'custom', text: 'my pet dragon' }, translate: true })
+    expect(asked[1]).toMatchObject({ topic: { kind: 'custom', text: 'my pet dragon' }, })
   })
 
   it('can ask for different sentences while reviewing', async () => {

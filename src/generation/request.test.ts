@@ -37,7 +37,6 @@ describe('parseGenerateRequest', () => {
       topic: { kind: 'preset', id: 'weather' },
       fresh: false,
       count: 2,
-      translate: false,
       difficulty: 'medium',
     })
   })
@@ -50,7 +49,6 @@ describe('parseGenerateRequest', () => {
       topic: { kind: 'custom', text: 'my pet dragon' },
       fresh: true,
       count: 2,
-      translate: false,
       difficulty: 'medium',
     })
   })
@@ -84,7 +82,6 @@ describe('parseGenerateRequest', () => {
       topic: { kind: 'preset', id: 'greetings' },
       fresh: false,
       count: 2,
-      translate: false,
       difficulty: 'medium',
     })
   })
@@ -93,19 +90,21 @@ describe('parseGenerateRequest', () => {
 describe('parseGenerateRequest options', () => {
   const base = { language: 'de', topic: { kind: 'preset', id: 'weather' } }
 
-  it('reads how many sentences and whether to translate them', () => {
-    expect(parseGenerateRequest({ ...base, count: 5, translate: true })).toMatchObject({ count: 5, translate: true })
-    expect(parseGenerateRequest({ ...base, count: 1 })).toMatchObject({ count: 1, translate: false })
+  it('reads how many sentences, and drops a translate flag an older client may still send', () => {
+    expect(parseGenerateRequest({ ...base, count: 5, translate: false })).toEqual({
+      language: 'de',
+      topic: { kind: 'preset', id: 'weather' },
+      fresh: false,
+      count: 5,
+      difficulty: 'medium',
+    })
+    expect(parseGenerateRequest({ ...base, count: 1 })).toMatchObject({ count: 1 })
   })
 
   it('accepts only whole numbers from 1 to 5', () => {
     for (const count of [0, 6, -1, 2.5, '3', null, NaN, Infinity]) {
       expect(parseGenerateRequest({ ...base, count }), String(count)).toBeNull()
     }
-  })
-
-  it('rejects a translate flag that is not true or false', () => {
-    for (const translate of ['yes', 1, null]) expect(parseGenerateRequest({ ...base, translate })).toBeNull()
   })
 
   it('reads the difficulty, and plays at medium when none is given', () => {

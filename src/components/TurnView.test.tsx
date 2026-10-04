@@ -11,8 +11,8 @@ const languages: Language[] = [
 ]
 
 const turns: GameState['turns'] = [
-  { player: 1, sentence: { id: 'a', text: 'Ich kann schwimmen.' }, learning: 'en' },
-  { player: 2, sentence: { id: 'b', text: 'You must leave now.' }, learning: 'de' },
+  { player: 1, sentence: { id: 'a', text: 'Ich kann schwimmen.', translation: 'Ich kann schwimmen. (translated)' }, learning: 'en' },
+  { player: 2, sentence: { id: 'b', text: 'You must leave now.', translation: 'You must leave now. (translated)' }, learning: 'de' },
 ]
 
 const playing: GameState = { turns, index: 0, status: 'playing', revealed: false }
@@ -34,15 +34,9 @@ function setup(game: GameState, props: { canAct?: boolean; onPlayAgain?: () => v
   return { onNext, onReveal, user: userEvent.setup() }
 }
 
-const translatedTurns: GameState['turns'] = turns.map((turn) => ({
-  ...turn,
-  sentence: { ...turn.sentence, translation: `${turn.sentence.text} (translated)` },
-}))
-const translated: GameState = { turns: translatedTurns, index: 0, status: 'playing', revealed: false }
-
-describe('TurnView with translations', () => {
+describe('TurnView translations', () => {
   it('keeps the translation hidden and offers to show it', async () => {
-    const { user, onReveal, onNext } = setup(translated)
+    const { user, onReveal, onNext } = setup(playing)
     expect(screen.queryByText(/\(translated\)/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Show translation' }))
     expect(onReveal).toHaveBeenCalledOnce()
@@ -50,7 +44,7 @@ describe('TurnView with translations', () => {
   })
 
   it('lets the player go to the next turn without showing the translation', async () => {
-    const { user, onNext, onReveal } = setup(translated)
+    const { user, onNext, onReveal } = setup(playing)
     await user.click(screen.getByRole('button', { name: 'Next turn' }))
     expect(onNext).toHaveBeenCalledOnce()
     expect(onReveal).not.toHaveBeenCalled()
@@ -58,7 +52,7 @@ describe('TurnView with translations', () => {
   })
 
   it('lets the player finish the round from the last turn without showing the translation', async () => {
-    const { user, onNext } = setup({ ...translated, index: 1 })
+    const { user, onNext } = setup({ ...playing, index: 1 })
     expect(screen.queryByRole('button', { name: 'Next turn' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Finish round' }))
     expect(onNext).toHaveBeenCalledOnce()
@@ -66,17 +60,17 @@ describe('TurnView with translations', () => {
   })
 
   it('only offers the way on once the translation is shown', () => {
-    setup({ ...translated, revealed: true })
+    setup({ ...playing, revealed: true })
     expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual(['Next turn'])
   })
 
   it('offers no button to the player who is waiting', () => {
-    setup(translated, { canAct: false })
+    setup(playing, { canAct: false })
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('shows the translation once revealed, and then lets the player move on', async () => {
-    const { user, onNext } = setup({ ...translated, revealed: true })
+    const { user, onNext } = setup({ ...playing, revealed: true })
     expect(screen.getByText('Ich kann schwimmen. (translated)')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Show translation' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next turn' }))
@@ -84,23 +78,18 @@ describe('TurnView with translations', () => {
   })
 
   it("shows the other player's translation without a button once revealed", () => {
-    setup({ ...translated, revealed: true }, { canAct: false })
+    setup({ ...playing, revealed: true }, { canAct: false })
     expect(screen.getByText('Ich kann schwimmen. (translated)')).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('never shows the translation to the player waiting before the reveal', () => {
-    setup(translated, { canAct: false })
+    setup(playing, { canAct: false })
     expect(screen.queryByText(/\(translated\)/)).not.toBeInTheDocument()
   })
 })
 
 describe('TurnView', () => {
-  it('has just the one Next turn button when there are no translations to skip', () => {
-    setup(playing)
-    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual(['Next turn'])
-  })
-
   it('shows the current turn and lets the acting player move on', async () => {
     const { user, onNext } = setup(playing)
     expect(screen.getByText('Turn 1 of 2')).toBeInTheDocument()

@@ -11,11 +11,10 @@ function setup(options: RoundOptions = DEFAULT_ROUND_OPTIONS) {
 }
 
 describe('RoundOptionsFields', () => {
-  it('starts with two sentences, medium difficulty and no translations', () => {
+  it('starts with two sentences and medium difficulty', () => {
     setup()
     expect(screen.getByLabelText('Sentences per player')).toHaveValue('2')
     expect(screen.getByLabelText('Difficulty')).toHaveValue('medium')
-    expect(screen.getByLabelText('Show the translation after each turn')).not.toBeChecked()
   })
 
   it('offers one to five sentences per player', () => {
@@ -35,36 +34,33 @@ describe('RoundOptionsFields', () => {
   })
 
   it('shows the options it is given', () => {
-    setup({ count: 3, translate: true, difficulty: 'hard' })
+    setup({ count: 3, difficulty: 'hard' })
     expect(screen.getByLabelText('Sentences per player')).toHaveValue('3')
     expect(screen.getByLabelText('Difficulty')).toHaveValue('hard')
-    expect(screen.getByLabelText('Show the translation after each turn')).toBeChecked()
   })
 
   it('reports a new number of sentences, keeping the other choices', async () => {
-    const { user, onChange } = setup({ count: 2, translate: true, difficulty: 'easy' })
+    const { user, onChange } = setup({ count: 2, difficulty: 'easy' })
     await user.selectOptions(screen.getByLabelText('Sentences per player'), '5')
-    expect(onChange).toHaveBeenCalledExactlyOnceWith({ count: 5, translate: true, difficulty: 'easy' })
+    expect(onChange).toHaveBeenCalledExactlyOnceWith({ count: 5, difficulty: 'easy' })
   })
 
   it('reports a new difficulty, keeping the other choices', async () => {
-    const { user, onChange } = setup({ count: 4, translate: false, difficulty: 'medium' })
+    const { user, onChange } = setup({ count: 4, difficulty: 'medium' })
     await user.selectOptions(screen.getByLabelText('Difficulty'), 'hard')
-    expect(onChange).toHaveBeenCalledExactlyOnceWith({ count: 4, translate: false, difficulty: 'hard' })
+    expect(onChange).toHaveBeenCalledExactlyOnceWith({ count: 4, difficulty: 'hard' })
   })
 
-  it('reports turning translations on, keeping the other choices', async () => {
-    const { user, onChange } = setup({ count: 4, translate: false, difficulty: 'hard' })
-    await user.click(screen.getByLabelText('Show the translation after each turn'))
-    expect(onChange).toHaveBeenCalledExactlyOnceWith({ count: 4, translate: true, difficulty: 'hard' })
+  it('has no translation switch, because translations are always on', () => {
+    setup()
+    expect(screen.queryByLabelText('Show the translation after each turn')).not.toBeInTheDocument()
   })
 })
 
 describe('RoundOptionsFields for one player', () => {
-  it('asks for sentences rather than sentences per player, and has no translation switch', () => {
+  it('asks for sentences rather than sentences per player', () => {
     render(<RoundOptionsFields options={DEFAULT_ROUND_OPTIONS} onChange={vi.fn()} solo />)
     expect(screen.getByLabelText('Sentences')).toHaveValue('2')
     expect(screen.getByLabelText('Difficulty')).toBeInTheDocument()
-    expect(screen.queryByLabelText('Show the translation after each turn')).not.toBeInTheDocument()
   })
 })

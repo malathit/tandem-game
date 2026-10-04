@@ -44,7 +44,6 @@ function parseTopic(value: unknown): GenerateTopic | null {
 export function parseGenerateRequest(value: unknown): GenerateRequest | null {
   if (!isRecord(value) || !isLanguageCode(value.language)) return null
   if (value.fresh !== undefined && typeof value.fresh !== 'boolean') return null
-  if (value.translate !== undefined && typeof value.translate !== 'boolean') return null
   const count = value.count === undefined ? DEFAULT_COUNT : value.count
   if (typeof count !== 'number' || !Number.isInteger(count) || count < MIN_COUNT || count > MAX_COUNT) return null
   const difficulty = value.difficulty === undefined ? DEFAULT_DIFFICULTY : value.difficulty
@@ -52,5 +51,5 @@ export function parseGenerateRequest(value: unknown): GenerateRequest | null {
   const topic = parseTopic(value.topic)
   return topic === null
     ? null
-    : { language: value.language, topic, fresh: value.fresh ?? false, count, translate: value.translate ?? false, difficulty }
+    : { language: value.language, topic, fresh: value.fresh ?? false, count, difficulty }
 }

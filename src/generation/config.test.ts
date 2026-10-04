@@ -46,10 +46,10 @@ describe('generatorFromUrl', () => {
   })
 
   it('gives a generator that calls that address', async () => {
-    const fetchFn = vi.fn(async () => new Response(JSON.stringify({ sentences: ['Ich kann gut schwimmen.', 'Er muss lernen.'] })))
+    const fetchFn = vi.fn(async () => new Response(JSON.stringify({ sentences: ['Ich kann gut schwimmen.', 'Er muss lernen.'], translations: ['I can swim well.', 'He has to learn.'] })))
     vi.stubGlobal('fetch', fetchFn)
     const generator = generatorFromUrl('https://example.workers.dev')
-    const sentences = await generator?.generate({ language: 'de', topic: { kind: 'preset', id: 'weather' }, fresh: false, count: 2, translate: false, difficulty: 'medium' })
+    const sentences = await generator?.generate({ language: 'de', topic: { kind: 'preset', id: 'weather' }, fresh: false, count: 2, difficulty: 'medium' })
     expect(sentences?.sentences).toHaveLength(2)
     expect(fetchFn.mock.calls[0]).toEqual(['https://example.workers.dev/', expect.anything()])
   })

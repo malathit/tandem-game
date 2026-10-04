@@ -33,8 +33,7 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
 
   const turn = game.turns[game.index]
   const isLastTurn = game.index === game.turns.length - 1
-  const needsReveal = turn.sentence.translation !== undefined && !game.revealed
-  const learning = languages.find((l) => l.code === turn.learning)?.name ?? turn.learning
+    const learning = languages.find((l) => l.code === turn.learning)?.name ?? turn.learning
 
   return (
     // data-player lets the CSS give each player their own colour.
@@ -54,14 +53,14 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
         </p>
       )}
       {canAct ? (
-        // With translations on, the speaker may show it first, or move on without showing it.
+        // The speaker may show the translation first, or move on without showing it.
         <>
-          {needsReveal && (
+          {!game.revealed && (
             <button type="button" className="primary" onClick={onReveal}>
               Show translation
             </button>
           )}
-          <button type="button" className={needsReveal ? undefined : 'primary'} onClick={onNext}>
+          <button type="button" className={game.revealed ? 'primary' : undefined} onClick={onNext}>
             {isLastTurn ? 'Finish round' : 'Next turn'}
           </button>
         </>
