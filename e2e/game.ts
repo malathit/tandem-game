@@ -20,6 +20,8 @@ export interface Settings {
   customTopic?: string
   count?: number
   difficulty?: 'easy' | 'medium' | 'hard'
+  /** The sentence review is off in a fresh install; the tests turn it on unless they say otherwise. */
+  review?: boolean
 }
 
 /**
@@ -31,6 +33,7 @@ export async function saveSettings(page: Page, settings: Settings = {}) {
   await page.getByLabel("I'm learning").selectOption('en')
   if (settings.count !== undefined) await page.getByLabel(/^Sentences/).selectOption(String(settings.count))
   if (settings.difficulty !== undefined) await page.getByLabel('Difficulty').selectOption(settings.difficulty)
+  if (settings.review ?? true) await page.getByLabel('Review sentences before the round').check()
   await page.getByRole('button', { name: 'Save settings' }).click()
 }
 
