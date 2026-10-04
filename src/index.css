@@ -394,11 +394,53 @@ label.check input {
 /* Status messages */
 
 .waiting {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
   padding: var(--space-4) var(--space-3);
   border: 2px dashed var(--border);
   border-radius: 1.25rem;
   color: var(--muted);
   text-align: center;
+}
+
+.waiting p {
+  margin: 0;
+}
+
+.spinner {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+}
+
+/* A wait that sits in a line of text rather than filling a box */
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+}
+
+.status-line .spinner {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-width: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .spinner {
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }
 
 .notice {
@@ -562,6 +604,18 @@ button:disabled {
   gap: var(--space-1);
 }
 
+/* Leaving, changing the topic and going back are always there, but never the next thing to press */
+.quiet,
+.actions button {
+  min-height: 2.5rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.card button.quiet {
+  justify-self: center;
+}
+
 .joined {
   text-align: center;
 }
@@ -587,15 +641,6 @@ button:disabled {
   }
 }
 
-.how-it-works {
-  margin: 0 0 1rem;
-  padding-left: 1.25rem;
-  text-align: left;
-}
-
-.how-it-works li + li {
-  margin-top: 0.35rem;
-}
 
 .tutorial p {
   margin: 0;

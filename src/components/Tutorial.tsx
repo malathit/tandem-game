@@ -4,31 +4,16 @@ const STEPS = [
   {
     title: 'Welcome to Tandem Game',
     body: [
-      "Learn each other's language, one sentence at a time.",
-      'You practise speaking: the game gives you sentences, and you say them aloud in the language you are learning.',
+      "Learn each other's language, one sentence at a time. You practise speaking, so the game never scores you.",
+      'An AI writes sentences on a topic you choose, in your own language. Say each one aloud in the language you are learning, then tap “Show translation” to check yourself, or skip it.',
     ],
   },
   {
-    title: 'How a round works',
+    title: 'On your own or with a partner',
     body: [
-      'An AI writes sentences on a topic you choose. Each one is shown in your own language.',
-      'Say it aloud in the language you are learning. Then tap “Show translation” to check yourself, or skip it.',
-      'Nothing is scored: the game is for practice, not for points.',
-    ],
-  },
-  {
-    title: 'Playing with a partner',
-    body: [
-      'Practise on your own, or with a partner who speaks the language you are learning, while you speak theirs.',
-      'One of you creates a game and shares its link or code. You take turns, and your partner tells you if it sounds right.',
+      'Practise on your own, or play with a partner on their own device: you speak their language and they speak yours. One of you creates a game and shares its link or code, and your partner tells you if it sounds right.',
       'Stay on a call or sit together: translations are spoken, not typed.',
-    ],
-  },
-  {
-    title: 'First, your settings',
-    body: [
-      'Next you choose the language you speak, the language you are learning, how many sentences a round has and how hard they are.',
-      'They are saved in this browser, and you can change them any time with “Settings” on the first screen.',
+      'Next you pick the languages you speak and learn. They are saved in this browser, and you can change them any time with “Settings”.',
     ],
   },
 ] as const
@@ -49,13 +34,12 @@ export function Tutorial({ onDone }: TutorialProps) {
       <p className="turn-count">
         Step {index + 1} of {STEPS.length}
       </p>
-      <progress value={index + 1} max={STEPS.length} aria-hidden="true" />
       <h2>{title}</h2>
       {body.map((paragraph) => (
         <p key={paragraph}>{paragraph}</p>
       ))}
       <button type="button" className="primary" onClick={isLast ? onDone : () => setIndex(index + 1)}>
-        {isLast ? 'Set my settings' : 'Next'}
+        {isLast ? 'Choose my languages' : 'Next'}
       </button>
       {index > 0 && (
         <button type="button" onClick={() => setIndex(index - 1)}>

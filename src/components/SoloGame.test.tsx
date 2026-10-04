@@ -110,6 +110,30 @@ describe('SoloGame', () => {
     expect(asked[1]).toMatchObject({ topic: { kind: 'custom', text: 'my pet dragon' }, })
   })
 
+  it('swaps the two languages between rounds, so the next sentences are written in the other one', async () => {
+    const { generator, asked } = instantGenerator()
+    const { ui, user } = play(generator)
+    await user.click(await ui.findByRole('button', { name: 'Looks good' }))
+    await user.click(ui.getByRole('button', { name: 'Change topic' }))
+    expect(ui.getByText('You are learning English')).toBeInTheDocument()
+
+    await user.click(ui.getByRole('button', { name: 'Swap languages' }))
+    expect(ui.getByText('You are learning German')).toBeInTheDocument()
+    await user.click(ui.getByRole('button', { name: 'Weather' }))
+    await ui.findByRole('heading', { name: 'Review your sentences' })
+    expect(asked[1]).toMatchObject({ language: 'en', topic: { kind: 'preset', id: 'weather' } })
+    expect(ui.getAllByText(/You translate into German/)).toHaveLength(2)
+  })
+
+  it('shows two steps, with no Connect step because there is nobody to connect to', async () => {
+    const { ui, user } = play()
+    expect(ui.getAllByRole('listitem').map((item) => item.textContent)).toContain('Sentences')
+    expect(ui.queryByText('Connect')).not.toBeInTheDocument()
+    expect(ui.getByText('Sentences', { selector: 'li.step' })).toHaveAttribute('aria-current', 'step')
+    await user.click(await ui.findByRole('button', { name: 'Looks good' }))
+    expect(ui.getByText('Play', { selector: 'li.step' })).toHaveAttribute('aria-current', 'step')
+  })
+
   it('can ask for different sentences while reviewing', async () => {
     const { generator, asked } = instantGenerator()
     const { ui, user } = play(generator)

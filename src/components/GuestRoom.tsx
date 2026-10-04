@@ -8,6 +8,7 @@ import { PlayerChips } from './PlayerChips'
 import { RoundPreview } from './RoundPreview'
 import { StepIndicator } from './StepIndicator'
 import { TurnView } from './TurnView'
+import { Waiting } from './Waiting'
 
 interface GuestRoomProps {
   network: Network
@@ -31,9 +32,16 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
   function renderBody() {
     if (status === 'connecting') {
       return (
-        <p className="waiting" role="status">
+        <Waiting
+          slow={`Still trying to reach game ${code}. Check the code and your internet connection.`}
+          actions={
+            <button type="button" onClick={onChangeCode}>
+              Enter a different code
+            </button>
+          }
+        >
           Connecting to the game…
-        </p>
+        </Waiting>
       )
     }
     if (status !== 'connected') {
@@ -52,9 +60,9 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
     // The host sets the guest's language when they join, so the first copy of the room already has it.
     if (room === null || room.guestKnows === null) {
       return (
-        <p className="waiting" role="status">
+        <Waiting slow="The host's game is still starting. If this goes on, ask them to check their connection.">
           Connected. Waiting for the host to start the game…
-        </p>
+        </Waiting>
       )
     }
 
@@ -67,9 +75,7 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
         <>
           <PlayerChips pair={pair} languages={languages} me={2} />
           {review === null ? (
-            <p className="waiting" role="status">
-              Waiting for the host to choose a topic…
-            </p>
+            <Waiting>Waiting for the host to choose a topic…</Waiting>
           ) : (
             <RoundPreview
               me={2}

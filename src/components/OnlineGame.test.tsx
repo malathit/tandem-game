@@ -290,7 +290,7 @@ describe('progress steps', () => {
 describe('joining a game that is not there, or is full', () => {
   it('says so when there is no game with that code', async () => {
     const user = userEvent.setup()
-    const guest = await startJoining(createMemoryNetwork(), user, 'ZZZZ9')
+    const guest = await startJoining(createMemoryNetwork(), user, '999999')
     expect(await guest.ui.findByRole('alert')).toHaveTextContent(/couldn't find a game with that code/i)
 
     await user.click(guest.ui.getByRole('button', { name: 'Enter a different code' }))

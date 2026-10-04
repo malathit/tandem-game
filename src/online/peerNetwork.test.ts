@@ -88,7 +88,7 @@ describe('peerNetwork.createRoom', () => {
     peer.emit('open')
     const room = await pending
 
-    expect(room.code).toMatch(/^[A-Z2-9]{5}$/)
+    expect(room.code).toMatch(/^[0-9]{6}$/)
     expect(peer.id).toBe(`tandem-game-${room.code}`)
   })
 
@@ -167,7 +167,7 @@ describe('peerNetwork.createRoom', () => {
 
 describe('peerNetwork.join', () => {
   async function joined() {
-    const pending = peerNetwork.join('K7QXZ')
+    const pending = peerNetwork.join('482913')
     const peer = await nextPeer(1)
     peer.emit('open')
     const connection = peer.connections[0]
@@ -177,7 +177,7 @@ describe('peerNetwork.join', () => {
 
   it('connects to the prefixed id of the room', async () => {
     const { connection } = await joined()
-    expect(connection.id).toBe('tandem-game-K7QXZ')
+    expect(connection.id).toBe('tandem-game-482913')
   })
 
   it('passes messages in both directions', async () => {
@@ -210,7 +210,7 @@ describe('peerNetwork.join', () => {
   })
 
   it('says "not found" when no host has that code', async () => {
-    const pending = peerNetwork.join('K7QXZ')
+    const pending = peerNetwork.join('482913')
     ;(await nextPeer(1)).emit('error', { type: 'peer-unavailable' })
 
     await expect(pending).rejects.toMatchObject({ reason: 'not-found' })
@@ -218,13 +218,13 @@ describe('peerNetwork.join', () => {
   })
 
   it('says "unavailable" when the matchmaker fails', async () => {
-    const pending = peerNetwork.join('K7QXZ')
+    const pending = peerNetwork.join('482913')
     ;(await nextPeer(1)).emit('error', { type: 'server-error' })
     await expect(pending).rejects.toMatchObject({ reason: 'unavailable' })
   })
 
   it('says "unavailable" when the connection itself fails', async () => {
-    const pending = peerNetwork.join('K7QXZ')
+    const pending = peerNetwork.join('482913')
     const peer = await nextPeer(1)
     peer.emit('open')
     peer.connections[0].emit('error', new Error('ice failed'))
@@ -234,7 +234,7 @@ describe('peerNetwork.join', () => {
 
   it('gives up when the connection never opens', async () => {
     vi.useFakeTimers()
-    const pending = peerNetwork.join('K7QXZ')
+    const pending = peerNetwork.join('482913')
     const settled = expect(pending).rejects.toMatchObject({ reason: 'unavailable' })
     await vi.advanceTimersByTimeAsync(0)
     lastPeer().emit('open')

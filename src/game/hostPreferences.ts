@@ -64,3 +64,9 @@ export function loadLastTopic(): string | null {
 }
 
 export const saveLastTopic = (topic: string) => write(TOPIC_KEY, topic)
+
+/** What a first visit starts from: a German speaker learns English, anyone else learns German. */
+export function suggestHostDefaults(browserLanguage: string = navigator.language): HostDefaults {
+  const german = browserLanguage.toLowerCase().startsWith('de')
+  return { knows: german ? 'de' : 'en', learns: german ? 'en' : 'de', options: DEFAULT_ROUND_OPTIONS }
+}

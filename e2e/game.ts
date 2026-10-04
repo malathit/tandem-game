@@ -55,7 +55,7 @@ export async function startGame(browser: Browser, settings: Settings = {}, ready
     await host.getByRole('button', { name: TOPIC }).click()
   }
   await host.getByRole('button', { name: 'Create game' }).click()
-  const code = (await host.getByText(/^[A-Z2-9]{5}$/).textContent()) ?? ''
+  const code = (await host.getByText(/^[0-9]{6}$/).textContent()) ?? ''
   await ready?.(host)
 
   const guest = await (await browser.newContext()).newPage()

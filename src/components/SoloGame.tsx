@@ -9,6 +9,7 @@ import type { SentenceGenerator } from '../generation/generator'
 import type { GenerateTopic } from '../generation/types'
 import type { HostSettings } from './HostSetup'
 import { RoundPreview } from './RoundPreview'
+import { StepIndicator } from './StepIndicator'
 import { TopicPicker } from './TopicPicker'
 import { TurnView } from './TurnView'
 
@@ -32,7 +33,9 @@ interface Round {
 
 /** One player practising alone: the same review and turns as the two-player game, without a partner or a network. */
 export function SoloGame({ languages, settings, generator, onLeave }: SoloGameProps) {
-  const { knows, learns, topic: firstTopic, options: firstOptions } = settings
+  const { topic: firstTopic, options: firstOptions } = settings
+  // The player can swap the two languages between rounds without going back to Settings.
+  const [{ knows, learns }, setLanguages] = useState({ knows: settings.knows, learns: settings.learns })
   const setup = useRoundSetup(learningPair(knows, learns), generator, {
     solo: true,
     onSkipReview: (topic, turns) => setRound({ topic: topicText(topic), game: createGame(turns) }),
@@ -109,18 +112,24 @@ export function SoloGame({ languages, settings, generator, onLeave }: SoloGamePr
 
     if (!picking) return null
     return (
-      <TopicPicker
-        topics={staticSource.getTopics()}
-        options={options}
-        onOptionsChange={setOptions}
-        onSelect={(topic) => choose(topic, options)}
-        solo
-      />
+      <>
+        <button type="button" onClick={() => setLanguages({ knows: learns, learns: knows })}>
+          Swap languages
+        </button>
+        <TopicPicker
+          topics={staticSource.getTopics()}
+          options={options}
+          onOptionsChange={setOptions}
+          onSelect={(topic) => choose(topic, options)}
+          solo
+        />
+      </>
     )
   }
 
   return (
     <>
+      <StepIndicator current={round === null ? 1 : 2} steps={['Sentences', 'Play']} />
       <ul className="players">
         <li data-player="1">You are learning {nameOf(learns)}</li>
       </ul>

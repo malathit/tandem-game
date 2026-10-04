@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { loadHostDefaults, loadLastTopic, saveHostDefaults, saveLastTopic } from './hostPreferences'
+import { loadHostDefaults, loadLastTopic, saveHostDefaults, saveLastTopic, suggestHostDefaults } from './hostPreferences'
 
 const defaults = { knows: 'de', learns: 'en', options: { count: 4, difficulty: 'hard', review: true } } as const
 
@@ -95,5 +95,16 @@ describe('last topic', () => {
     })
     expect(loadLastTopic()).toBeNull()
     expect(() => saveLastTopic('weather')).not.toThrow()
+  })
+})
+
+describe('suggested host defaults', () => {
+  it('have a German browser speak German and learn English', () => {
+    expect(suggestHostDefaults('de-AT')).toMatchObject({ knows: 'de', learns: 'en' })
+  })
+
+  it('have any other browser speak English and learn German', () => {
+    expect(suggestHostDefaults('fr-FR')).toMatchObject({ knows: 'en', learns: 'de' })
+    expect(suggestHostDefaults('')).toMatchObject({ knows: 'en', learns: 'de' })
   })
 })

@@ -30,6 +30,16 @@ describe('the first visit', () => {
     expect(ui.getByRole('button', { name: '1 player' })).toBeInTheDocument()
   })
 
+  it('starts the settings from a suggestion, so a first game can begin without choosing anything', async () => {
+    const user = userEvent.setup()
+    const { ui } = open(createMemoryNetwork(), undefined, null)
+    await user.click(ui.getByRole('button', { name: 'Skip tutorial' }))
+    expect(ui.getByLabelText('I speak')).toHaveValue('en')
+    expect(ui.getByLabelText("I'm learning")).toHaveValue('de')
+    await user.click(ui.getByRole('button', { name: 'Save settings' }))
+    expect(loadHostDefaults()).toMatchObject({ knows: 'en', learns: 'de' })
+  })
+
   it('does not ask again once they are saved', () => {
     const { ui } = open(createMemoryNetwork())
     expect(ui.getByRole('button', { name: '1 player' })).toBeInTheDocument()
@@ -118,7 +128,7 @@ describe('creating a game from the saved settings', () => {
 
 describe('joining through an invite link', () => {
   function openInvite() {
-    const view = render(<OnlineGame network={createMemoryNetwork()} languages={languages} initialCode="ZZZZ9" />)
+    const view = render(<OnlineGame network={createMemoryNetwork()} languages={languages} initialCode="999999" />)
     return within(view.container)
   }
 

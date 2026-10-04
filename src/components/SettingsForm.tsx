@@ -19,6 +19,7 @@ export function SettingsForm({ languages, defaults, onSave, onBack }: SettingsFo
   const [learns, setLearns] = useState<LanguageCode | ''>(defaults?.learns ?? '')
   const [options, setOptions] = useState(defaults?.options ?? DEFAULT_ROUND_OPTIONS)
   const id = useId()
+  const nameOf = (code: LanguageCode) => languages.find((language) => language.code === code)?.name ?? code
 
   function chooseKnows(code: LanguageCode | '') {
     setKnows(code)
@@ -79,6 +80,11 @@ export function SettingsForm({ languages, defaults, onSave, onBack }: SettingsFo
             nothing to set up.
           </small>
         </div>
+        {knows !== '' && learns !== '' && (
+          <p className="settings-example" role="status">
+            You will read sentences in {nameOf(knows)} and say them aloud in {nameOf(learns)}.
+          </p>
+        )}
         <RoundOptionsFields options={options} onChange={setOptions} withHelp />
         <button type="submit" className="primary" disabled={knows === '' || learns === ''}>
           Save settings

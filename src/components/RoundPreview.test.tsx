@@ -151,12 +151,23 @@ describe('RoundPreview', () => {
       expect(screen.queryByRole('list')).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Looks good' })).not.toBeInTheDocument()
     })
+
+    it('is not called a review until there is something to review', () => {
+      show(review({ busy: true, turns: [] }))
+      expect(screen.getByRole('heading', { name: 'Getting your sentences ready' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Review your sentences' })).not.toBeInTheDocument()
+    })
+
+    it('stays a review while new sentences replace the ones being reviewed', () => {
+      show(review({ busy: true }))
+      expect(screen.getByRole('heading', { name: 'Review your sentences' })).toBeInTheDocument()
+    })
   })
 
   describe('when generating failed', () => {
     const messages: [GenerationErrorKind, RegExp][] = [
       ['unavailable', /can't be reached/i],
-      ['limit-reached', /allowance is used up.*midnight UTC/i],
+      ['limit-reached', /allowance is used up.*resets at .*\d.* your time/i],
       ['invalid', /usable sentences/i],
     ]
 

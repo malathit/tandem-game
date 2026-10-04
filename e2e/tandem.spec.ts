@@ -155,5 +155,6 @@ test('playing alone: the AI writes German sentences, each shows its English tran
 
   await expect(page.getByRole('heading', { name: 'Round complete' })).toBeVisible()
   await page.getByRole('button', { name: 'Play again' }).click()
-  await expect(page.getByRole('heading', { name: 'Review your sentences' })).toBeVisible()
+  // The heading only reads "Review" once the AI has written the new sentences.
+  await expect(page.getByRole('heading', { name: 'Review your sentences' })).toBeVisible({ timeout: 30_000 })
 })

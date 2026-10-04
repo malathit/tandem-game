@@ -23,6 +23,12 @@ describe('StepIndicator', () => {
     expect(marked[0]).toHaveAttribute('aria-current', 'step')
   })
 
+  it('can list other steps, for a game with no partner', () => {
+    render(<StepIndicator current={2} steps={['Sentences', 'Play']} />)
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Sentences', 'Play'])
+    expect(screen.getByText('Play')).toHaveAttribute('aria-current', 'step')
+  })
+
   it('is announced as progress navigation', () => {
     render(<StepIndicator current={2} />)
     expect(screen.getByRole('navigation', { name: 'Progress' })).toBeInTheDocument()

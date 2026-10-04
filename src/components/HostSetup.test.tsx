@@ -39,8 +39,9 @@ describe('HostSetup', () => {
     expect(summary).toHaveTextContent(/I speakGerman/)
     expect(summary).toHaveTextContent(/I'm learningEnglish/)
     expect(summary).toHaveTextContent(/Sentences per player4/)
-    expect(summary).toHaveTextContent(/Difficultyhard/)
-    expect(summary).toHaveTextContent(/Translationswhen you tap “Show translation”/)
+    expect(summary).toHaveTextContent(/DifficultyHard/)
+    expect(summary).toHaveTextContent(/Review sentences firstYes/)
+    expect(summary).not.toHaveTextContent(/Translations/)
   })
 
   it('creates the game from the saved settings and the last topic', async () => {
@@ -113,7 +114,6 @@ describe('HostSetup for one player', () => {
     expect(screen.getByRole('heading', { name: 'Practise on your own' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Create game' })).not.toBeInTheDocument()
     expect(screen.getByText('Sentences')).toBeInTheDocument()
-    expect(screen.getByText('when you tap “Show translation”')).toBeInTheDocument()
     await user.click(create)
     expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ learns: 'en' }))
   })

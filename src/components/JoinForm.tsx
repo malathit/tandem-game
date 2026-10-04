@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { normalizeRoomCode } from '../online/roomCode'
+import { CODE_LENGTH, normalizeRoomCode } from '../online/roomCode'
 
 interface JoinFormProps {
   /** Called with a valid, normalised game code. */
@@ -26,17 +26,21 @@ export function JoinForm({ onJoin }: JoinFormProps) {
         Game code
         <input
           value={value}
-          maxLength={10}
-          autoCapitalize="characters"
+          maxLength={CODE_LENGTH + 4}
+          inputMode="numeric"
           autoComplete="off"
           onChange={(e) => {
-            setValue(e.target.value)
+            // A code has no spaces or dashes, so show what will be sent.
+            setValue(e.target.value.replace(/[\s-]/g, ''))
             setInvalid(false)
           }}
         />
       </label>
-      <p className="hint">Ask the person who created the game for its 5-character code, or open their invite link.</p>
-      {invalid && <p role="alert">A game code has 5 characters: letters and the numbers 2 to 9.</p>}
+      <p className="hint">
+        Ask the person who created the game for its {CODE_LENGTH}-digit code, or open their invite link.{' '}
+        <span aria-hidden="true">{value.length} of {CODE_LENGTH} digits typed.</span>
+      </p>
+      {invalid && <p role="alert">A game code has {CODE_LENGTH} digits, with no letters.</p>}
       <button type="submit" className="primary" disabled={value.trim() === ''}>
         Join game
       </button>

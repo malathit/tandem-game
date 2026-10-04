@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { staticSource } from '../content/staticSource'
 import type { Language } from '../content/types'
-import { loadHostDefaults, loadLastTopic, saveHostDefaults, saveLastTopic } from '../game/hostPreferences'
+import { loadHostDefaults, loadLastTopic, saveHostDefaults, saveLastTopic, suggestHostDefaults } from '../game/hostPreferences'
 import type { SentenceGenerator } from '../generation/generator'
 import type { Network } from '../online/network'
 import { GuestRoom } from './GuestRoom'
@@ -57,7 +57,7 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
   const settingsScreen = (returnTo: Stage, onBack?: () => void) => (
     <SettingsForm
       languages={languages}
-      defaults={defaults}
+      defaults={defaults ?? suggestHostDefaults()}
       onSave={(saved) => {
         saveHostDefaults(saved)
         setDefaults(saved)
@@ -73,12 +73,7 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
       return (
         <section className="card">
           <h2>Start a game</h2>
-          <p>Practise on your own, or with a partner.</p>
-          <ol className="how-it-works">
-            <li>An AI writes sentences on a topic you choose, in your own language.</li>
-            <li>You read each one and say it aloud in the language you are learning.</li>
-            <li>Tap “Show translation” to check yourself, or let your partner judge. Nothing is scored.</li>
-          </ol>
+          <p>Practise on your own, or with a partner who plays on their own device.</p>
           <button type="button" className="primary" onClick={() => setStage({ kind: 'solo-setup' })}>
             1 player
           </button>
@@ -123,8 +118,8 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
         <section className="card">
           <h2>Play with a partner</h2>
           <p>
-            One of you creates a game and shares its code, and the other joins with it. You say your
-            translations out loud, so stay on a call or sit together.
+            Each of you uses your own device: one of you creates a game and shares its link or code, and the other
+            joins with it. You say your translations out loud, so stay on a call or sit together.
           </p>
           <button type="button" className="primary" onClick={() => setStage({ kind: 'host-setup' })}>
             Create a game

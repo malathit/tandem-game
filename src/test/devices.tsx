@@ -69,7 +69,7 @@ export async function createGame(
   await user.click(device.ui.getByRole('button', { name: 'Create a game' }))
   await chooseTopic(device, user, choices)
   await user.click(device.ui.getByRole('button', { name: 'Create game' }))
-  const code = (await device.ui.findByText(/^[A-Z2-9]{5}$/)).textContent ?? ''
+  const code = (await device.ui.findByText(/^[0-9]{6}$/)).textContent ?? ''
   return { ...device, code }
 }
 
@@ -98,5 +98,6 @@ export async function confirmSentences(host: ReturnType<typeof open>, guest: Ret
 /** Both players review the sentences, which the host's topic already asked for, and confirm them. */
 export const startRound = confirmSentences
 
-/** The host's screen once the partner has joined and the sentences have been asked for. */
-export const reviewing = (host: ReturnType<typeof open>) => host.ui.findByRole('heading', { name: 'Review your sentences' })
+/** The host's screen once the partner has joined and the sentences have been asked for: loading, failed or ready to review. */
+export const reviewing = (host: ReturnType<typeof open>) =>
+  host.ui.findByRole('heading', { name: /^(Getting your sentences ready|Review your sentences)$/ })

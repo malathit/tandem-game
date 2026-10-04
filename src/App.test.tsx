@@ -45,7 +45,7 @@ describe('App', () => {
 
 describe('opening an invite link', () => {
   it('tries to join the game in the link and removes the code from the address bar', async () => {
-    window.history.replaceState(null, '', '/?join=ZZZZ9')
+    window.history.replaceState(null, '', '/?join=999999')
     render(<App network={createMemoryNetwork()} />)
 
     // No such game exists on the fake network, which proves the code was used.

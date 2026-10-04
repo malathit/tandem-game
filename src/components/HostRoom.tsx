@@ -12,9 +12,11 @@ import { buildInviteUrl } from '../online/inviteLink'
 import { InviteLink } from './InviteLink'
 import { PlayerChips } from './PlayerChips'
 import { RoundPreview } from './RoundPreview'
+import { Spinner } from './Spinner'
 import { StepIndicator } from './StepIndicator'
 import { TopicPicker } from './TopicPicker'
 import { TurnView } from './TurnView'
+import { Waiting } from './Waiting'
 
 const NOBODY_CONFIRMED = [false, false] as const
 
@@ -91,9 +93,16 @@ export function HostRoom({ network, languages, hostKnows, hostLearns, firstRound
   function renderBody() {
     if (status === 'opening') {
       return (
-        <p className="waiting" role="status">
+        <Waiting
+          slow="This is taking longer than usual. Check your internet connection."
+          actions={
+            <button type="button" onClick={onLeave}>
+              Go back
+            </button>
+          }
+        >
           Setting up your game…
-        </p>
+        </Waiting>
       )
     }
     if (status === 'error') {
@@ -110,7 +119,9 @@ export function HostRoom({ network, languages, hostKnows, hostLearns, firstRound
           <p>Send your partner this link, or ask them to choose “Join a game” and enter this code:</p>
           <p className="room-code">{code}</p>
           {code !== null && <InviteLink url={buildInviteUrl(code, window.location.href)} />}
-          <p role="status">Waiting for your partner to join…</p>
+          <p className="status-line" role="status">
+            <Spinner /> Waiting for your partner to join…
+          </p>
         </section>
       )
     }

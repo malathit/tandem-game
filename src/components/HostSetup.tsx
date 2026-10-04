@@ -38,9 +38,8 @@ export function HostSetup({ languages, topics, defaults, lastTopic, onCreate, on
     ['I speak', nameOf(knows)],
     ["I'm learning", nameOf(learns)],
     [solo ? 'Sentences' : 'Sentences per player', String(options.count)],
-    ['Difficulty', options.difficulty],
-    ['Review sentences', options.review ? 'yes' : 'no'],
-    ['Translations', 'when you tap “Show translation”'],
+    ['Difficulty', options.difficulty.charAt(0).toUpperCase() + options.difficulty.slice(1)],
+    ['Review sentences first', options.review ? 'Yes' : 'No'],
   ]
 
   return (

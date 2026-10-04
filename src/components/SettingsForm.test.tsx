@@ -53,6 +53,14 @@ describe('SettingsForm', () => {
     })
   })
 
+  it('says in one sentence what the chosen languages mean', async () => {
+    const { user } = setup()
+    expect(screen.queryByText(/You will read sentences/)).not.toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('I speak'), 'de')
+    await user.selectOptions(screen.getByLabelText("I'm learning"), 'en')
+    expect(screen.getByRole('status')).toHaveTextContent('You will read sentences in German and say them aloud in English.')
+  })
+
   it('explains every setting', () => {
     setup()
     expect(screen.getByLabelText('I speak')).toHaveAccessibleDescription(/your sentences are written in/i)

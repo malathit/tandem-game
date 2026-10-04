@@ -103,11 +103,28 @@ describe('TurnView', () => {
     expect(onNext).toHaveBeenCalledOnce()
   })
 
+  it('makes Show translation the main action, and Next turn the main action once it is shown', () => {
+    const { unmount } = render(
+      <TurnView game={playing} languages={languages} canAct onNext={vi.fn()} onReveal={vi.fn()} />,
+    )
+    expect(screen.getByRole('button', { name: 'Show translation' })).toHaveClass('primary')
+    expect(screen.getByRole('button', { name: 'Next turn' })).not.toHaveClass('primary')
+    unmount()
+    setup({ ...playing, revealed: true })
+    expect(screen.getByRole('button', { name: 'Next turn' })).toHaveClass('primary')
+  })
+
+  it('keeps Previous sentence visually quiet', () => {
+    setup({ ...playing, index: 1 }, { onPrevious: vi.fn() })
+    expect(screen.getByRole('button', { name: 'Previous sentence' })).toHaveClass('quiet')
+  })
+
   it("still shows the sentence but no button when it is the other player's turn", () => {
     setup(playing, { canAct: false })
     expect(screen.getByText('Ich kann schwimmen.')).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('Waiting for your partner to finish their turn')
+    expect(screen.getByRole('status').querySelector('.spinner')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: "Your partner's turn: translate into English" })).toBeInTheDocument()
   })
 
@@ -122,6 +139,37 @@ describe('TurnView', () => {
     expect(screen.getByRole('heading', { name: 'Round complete' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Play again' }))
     expect(onPlayAgain).toHaveBeenCalledOnce()
+  })
+
+  describe('telling a player the sentence went back', () => {
+    const second: GameState = { ...playing, index: 1 }
+    const view = (game: GameState) => <TurnView game={game} languages={languages} canAct={false} onNext={vi.fn()} onReveal={vi.fn()} />
+
+    it('says so when the other player steps back', () => {
+      const { rerender } = render(view(second))
+      expect(screen.queryByText('Back to the previous sentence.')).not.toBeInTheDocument()
+      rerender(view(playing))
+      expect(screen.getByText('Back to the previous sentence.')).toBeInTheDocument()
+    })
+
+    it('says so when a finished round is reopened', () => {
+      const { rerender } = render(view(finished))
+      rerender(view({ ...finished, status: 'playing' }))
+      expect(screen.getByText('Back to the previous sentence.')).toBeInTheDocument()
+    })
+
+    it('goes away when the round moves on again', () => {
+      const { rerender } = render(view(second))
+      rerender(view(playing))
+      rerender(view(second))
+      expect(screen.queryByText('Back to the previous sentence.')).not.toBeInTheDocument()
+    })
+
+    it('says nothing when the round simply moves forward', () => {
+      const { rerender } = render(view(playing))
+      rerender(view(second))
+      expect(screen.queryByText('Back to the previous sentence.')).not.toBeInTheDocument()
+    })
   })
 
   describe('going back to the previous sentence', () => {

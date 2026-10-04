@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import type { Language } from '../content/types'
 import type { GameState } from '../game/gameReducer'
+import { Spinner } from './Spinner'
 
 interface TurnViewProps {
   game: GameState
@@ -17,8 +19,18 @@ interface TurnViewProps {
 
 /** Shows a round from the host's copy of the game; it owns no state itself. */
 export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgain, onPrevious }: TurnViewProps) {
+  // Either player can step back, so the other one is told when the sentence changes under them.
+  // A finished round counts as one step past the last turn, since stepping back from it reopens that turn.
+  const position = game.status === 'finished' ? game.turns.length : game.index
+  const [seenPosition, setSeenPosition] = useState(position)
+  const [wentBack, setWentBack] = useState(false)
+  if (position !== seenPosition) {
+    setSeenPosition(position)
+    setWentBack(position < seenPosition)
+  }
+
   const previousButton = (
-    <button type="button" className="secondary" onClick={onPrevious}>
+    <button type="button" className="secondary quiet" onClick={onPrevious}>
       Previous sentence
     </button>
   )
@@ -27,7 +39,7 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
     return (
       <section className="card finished">
         <h2>Round complete</h2>
-        <p>{game.turns.length} sentences translated.</p>
+        <p>{game.turns.length} sentences practised.</p>
         {onPrevious && game.turns.length > 0 && previousButton}
         {onPlayAgain ? (
           <>
@@ -37,7 +49,9 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
             </button>
           </>
         ) : (
-          <p role="status">Waiting for the host to start another round.</p>
+          <p className="status-line" role="status">
+            <Spinner /> Waiting for the host to start another round.
+          </p>
         )}
       </section>
     )
@@ -45,7 +59,7 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
 
   const turn = game.turns[game.index]
   const isLastTurn = game.index === game.turns.length - 1
-    const learning = languages.find((l) => l.code === turn.learning)?.name ?? turn.learning
+  const learning = languages.find((l) => l.code === turn.learning)?.name ?? turn.learning
 
   return (
     // data-player lets the CSS give each player their own colour.
@@ -53,6 +67,11 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
       <p className="turn-count">
         Turn {game.index + 1} of {game.turns.length}
       </p>
+      {wentBack && (
+        <p className="notice" role="status">
+          Back to the previous sentence.
+        </p>
+      )}
       <progress value={game.index + 1} max={game.turns.length} aria-hidden="true" />
       <h2>
         {canAct ? 'Your turn' : "Your partner's turn"}: translate into {learning}
@@ -77,12 +96,15 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
               Show translation
             </button>
           )}
-          <button type="button" className={game.revealed ? 'primary' : undefined} onClick={onNext}>
+          {/* One main action at a time: show the translation first, and only then move on. */}
+          <button type="button" className={game.revealed ? 'primary' : 'secondary'} onClick={onNext}>
             {isLastTurn ? 'Finish round' : 'Next turn'}
           </button>
         </>
       ) : (
-        <p role="status">Waiting for your partner to finish their turn…</p>
+        <p className="status-line" role="status">
+          <Spinner /> Waiting for your partner to finish their turn…
+        </p>
       )}
       {onPrevious && game.index > 0 && previousButton}
       <p className="preview-source">Written by AI, so a sentence can contain mistakes.</p>

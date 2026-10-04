@@ -12,14 +12,27 @@ function setup() {
 describe('JoinForm', () => {
   it('joins with a cleaned-up code', async () => {
     const { user, input, onJoin } = setup()
-    await user.type(input, ' k7q-xz {Enter}')
-    expect(onJoin).toHaveBeenCalledExactlyOnceWith('K7QXZ')
+    await user.type(input, ' 482-913 {Enter}')
+    expect(onJoin).toHaveBeenCalledExactlyOnceWith('482913')
+  })
+
+  it('shows the code without spaces or dashes as it is typed', async () => {
+    const { user, input } = setup()
+    await user.type(input, '48 2-9')
+    expect(input).toHaveValue('4829')
+  })
+
+  it('counts the characters typed so far', async () => {
+    const { user, input } = setup()
+    expect(screen.getByText('0 of 6 digits typed.')).toBeInTheDocument()
+    await user.type(input, '482')
+    expect(screen.getByText('3 of 6 digits typed.')).toBeInTheDocument()
   })
 
   it('explains when the code cannot be right and does not join', async () => {
     const { user, input, onJoin } = setup()
-    await user.type(input, 'abc{Enter}')
-    expect(screen.getByRole('alert')).toHaveTextContent(/5 characters/i)
+    await user.type(input, '123{Enter}')
+    expect(screen.getByRole('alert')).toHaveTextContent(/6 digits/i)
     expect(onJoin).not.toHaveBeenCalled()
   })
 
@@ -27,7 +40,7 @@ describe('JoinForm', () => {
     const { user, input } = setup()
     await user.type(input, 'abc{Enter}')
     await user.clear(input)
-    await user.type(input, 'K7QXZ')
+    await user.type(input, '482913')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 

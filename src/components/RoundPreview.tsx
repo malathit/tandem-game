@@ -1,6 +1,9 @@
 import type { Language } from '../content/types'
 import type { GenerationErrorKind } from '../generation/types'
 import type { ReviewState } from '../online/protocol'
+import { Waiting } from './Waiting'
+import { allowanceResetTime } from '../generation/allowanceReset'
+import { Spinner } from './Spinner'
 
 interface RoundPreviewProps {
   /** The player this device belongs to; they only review the sentences they will read. */
@@ -16,11 +19,11 @@ interface RoundPreviewProps {
   onBack?: () => void
 }
 
-const PROBLEMS: Record<GenerationErrorKind, string> = {
-  unavailable: "The AI service can't be reached right now.",
-  'limit-reached': 'The free AI allowance is used up for today. It resets at midnight UTC.',
-  invalid: "The AI didn't give usable sentences this time.",
-  cancelled: '',
+const PROBLEMS: Record<GenerationErrorKind, () => string> = {
+  unavailable: () => "The AI service can't be reached right now.",
+  'limit-reached': () => `The free AI allowance is used up for today. It resets at ${allowanceResetTime()} your time.`,
+  invalid: () => "The AI didn't give usable sentences this time.",
+  cancelled: () => '',
 }
 
 /** Each player checks the sentences they will read aloud, in their own language, before the round starts. */
@@ -34,13 +37,13 @@ export function RoundPreview({ me, review, topicLabel, languages, onConfirm, onR
 
   return (
     <section className="card">
-      <h2>Review your sentences</h2>
+      <h2>{hasSentences ? 'Review your sentences' : 'Getting your sentences ready'}</h2>
       <p>Topic: {topicLabel}</p>
 
       {busy && (
-        <p className="waiting" role="status">
+        <Waiting slow={`The AI is taking longer than usual.${onCancel ? ' You can wait, or cancel and try again.' : ''}`}>
           Generating {hasSentences ? 'new ' : ''}sentences…
-        </p>
+        </Waiting>
       )}
 
       {hasSentences && (
@@ -62,7 +65,7 @@ export function RoundPreview({ me, review, topicLabel, languages, onConfirm, onR
 
       {error !== null && (
         <p className="notice" role="alert">
-          {PROBLEMS[error]}{' '}
+          {PROBLEMS[error]()}{' '}
           {hasSentences
             ? 'You can try again or confirm these sentences.'
             : onBack
@@ -72,7 +75,9 @@ export function RoundPreview({ me, review, topicLabel, languages, onConfirm, onR
       )}
 
       {!busy && iConfirmed && !partnerConfirmed && (
-        <p role="status">Waiting for your partner to confirm their sentences…</p>
+        <p className="status-line" role="status">
+          <Spinner /> Waiting for your partner to confirm their sentences…
+        </p>
       )}
       {!busy && !iConfirmed && partnerConfirmed && <p role="status">Your partner has confirmed their sentences.</p>}
 
