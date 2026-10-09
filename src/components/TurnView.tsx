@@ -67,7 +67,7 @@ export function TurnView({ game, languages, canAct, onNext, onReveal, onPlayAgai
       <p className="turn-count">
         Turn {game.index + 1} of {game.turns.length}
       </p>
-      {wentBack && (
+      {wentBack && !game.revealed && (
         <p className="notice" role="status">
           Back to the previous sentence.
         </p>

@@ -158,6 +158,13 @@ describe('TurnView', () => {
       expect(screen.getByText('Back to the previous sentence.')).toBeInTheDocument()
     })
 
+    it('goes away once the translation is shown', () => {
+      const { rerender } = render(view(second))
+      rerender(view(playing))
+      rerender(view({ ...playing, revealed: true }))
+      expect(screen.queryByText('Back to the previous sentence.')).not.toBeInTheDocument()
+    })
+
     it('goes away when the round moves on again', () => {
       const { rerender } = render(view(second))
       rerender(view(playing))
