@@ -126,6 +126,7 @@ describe('parseHostMessage', () => {
     ['missing guest language', { hostKnows: 'en', round: null }],
     ['a game status that does not exist', withRound({ status: 'paused' })],
     ['a turn index past the end', withRound({ index: 2 })],
+    ['a game in progress with no turns', withRound({ turns: [], index: 0 })],
     ['a negative turn index', withRound({ index: -1 })],
     ['a fractional turn index', withRound({ index: 0.5 })],
     ['a player that is not 1 or 2', withRound({ turns: [{ player: 3, sentence: { id: 'a', text: 'x' }, learning: 'en' }], index: 0 })],

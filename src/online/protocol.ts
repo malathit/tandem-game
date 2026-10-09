@@ -74,6 +74,7 @@ function parseGame(raw: unknown): GameState | null {
   const { index, status, revealed } = raw
   if (status !== 'playing' && status !== 'finished') return null
   if (typeof revealed !== 'boolean') return null
+  if (status === 'playing' && turns.length === 0) return null // there would be no turn to show
   if (typeof index !== 'number' || !Number.isInteger(index) || index < 0) return null
   if (index >= Math.max(turns.length, 1)) return null
   return { turns, index, status, revealed }
