@@ -32,7 +32,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 function failureKind(status: number, text: string): GenerationErrorKind {
   if (status === 429) return 'limit-reached'
-  if (status === 400 || status === 403 || status === 413) return 'invalid'
+  if (status === 400 || status === 413) return 'invalid'
+  // 403 means this site is not allowed to use the service: a setup problem, not bad sentences.
   if (status >= 500) {
     try {
       const body: unknown = JSON.parse(text)

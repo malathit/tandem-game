@@ -61,7 +61,10 @@ describe('createHttpGenerator', () => {
     it('the service giving up on bad output, or refusing the request, means invalid', async () => {
       expect(await kindFor(() => answer({ error: 'invalid' }, 502))).toBe('invalid')
       expect(await kindFor(() => answer({ error: 'bad-request' }, 400))).toBe('invalid')
-      expect(await kindFor(() => answer({ error: 'forbidden' }, 403))).toBe('invalid')
+    })
+
+    it('a site the service does not allow means unavailable, not unusable sentences', async () => {
+      expect(await kindFor(() => answer({ error: 'forbidden' }, 403))).toBe('unavailable')
     })
   })
 
