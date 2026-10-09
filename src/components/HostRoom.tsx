@@ -191,7 +191,8 @@ export function HostRoom({ network, languages, hostKnows, hostLearns, firstRound
       <StepIndicator current={step} />
       {pair !== null && !partnerConnected && (
         <p className="notice" role="status">
-          Your partner is disconnected. They can rejoin with the code {code}.
+          Your partner is disconnected. They can rejoin with the code {code}
+          {round !== null ? ', or you can end this round with Change topic.' : '.'}
         </p>
       )}
       {renderBody()}

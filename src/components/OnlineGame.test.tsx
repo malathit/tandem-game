@@ -344,6 +344,22 @@ describe('connection problems', () => {
     await waitFor(() => expect(host.ui.queryByText(/partner is disconnected/i)).not.toBeInTheDocument())
   })
 
+  it('tells the host they can end the round when the partner dropped mid-round, and lets them', async () => {
+    const user = userEvent.setup()
+    const network = createMemoryNetwork()
+    const host = await createGame(network, user)
+    const guest = await joinGame(network, user, host.code)
+    await startRound(host, guest, user)
+    await user.click(await host.ui.findByRole('button', { name: 'Next turn' }))
+    await guest.ui.findByText('Turn 2 of 4')
+
+    guest.unmount()
+    expect(await host.ui.findByText(/partner is disconnected.*end this round with Change topic/i)).toBeInTheDocument()
+
+    await user.click(host.ui.getByRole('button', { name: 'Change topic' }))
+    expect(await host.ui.findByLabelText('Or enter your own topic')).toBeInTheDocument()
+  })
+
   it('tells the guest when the host leaves', async () => {
     const user = userEvent.setup()
     const network = createMemoryNetwork()
