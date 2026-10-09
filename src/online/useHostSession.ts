@@ -19,7 +19,7 @@ const ignore = () => {}
 /**
  * Opens a room and keeps it in sync with the guest. The host holds the real
  * game state; the guest sends requests and gets a full copy after every change.
- * Only one guest can be connected at a time.
+ * Only one guest can be connected at a time; a new connection replaces the old one.
  */
 export function useHostSession(
   network: Network,
@@ -36,7 +36,8 @@ export function useHostSession(
   const [room, dispatch] = useReducer(roomReducer, undefined, () => createRoom(hostKnows, firstTopic, canGenerate))
   const [status, setStatus] = useState<HostSession['status']>('opening')
   const [code, setCode] = useState<string | null>(null)
-  const [partnerConnected, setPartnerConnected] = useState(false)
+  // The connection the guest is on, so a guest who rejoins gets a copy of the state on their new one.
+  const [guestConnection, setGuestConnection] = useState<Connection | null>(null)
   const guest = useRef<Connection | null>(null)
   const regenerate = useRef(onGuestRegenerate)
   useEffect(() => {
@@ -48,11 +49,11 @@ export function useHostSession(
     let openRoom: Room | null = null
 
     function accept(connection: Connection) {
-      if (guest.current) {
-        connection.close() // the room is full
-        return
-      }
-      guest.current = connection
+      // There is only one guest, so a new connection is the same guest coming back (say, after a refresh)
+      // before the host noticed the old one die.
+      const previous = guest.current
+      guest.current = connection // first, so the old connection closing does not count as the guest leaving
+      previous?.close()
       // The guest speaks what the host is learning, so there is nothing for them to choose.
       dispatch({ type: 'GUEST_HELLO', knows: hostLearns })
       connection.onMessage((raw) => {
@@ -70,11 +71,11 @@ export function useHostSession(
       connection.onClose(() => {
         if (guest.current === connection) {
           guest.current = null
-          setPartnerConnected(false)
+          setGuestConnection(null)
           dispatch({ type: 'GUEST_LEFT' })
         }
       })
-      setPartnerConnected(true)
+      setGuestConnection(connection)
     }
 
     network.createRoom().then(
@@ -103,8 +104,8 @@ export function useHostSession(
 
   // Send the guest a full copy whenever the state changes or the guest (re)connects.
   useEffect(() => {
-    if (partnerConnected) guest.current?.send({ type: 'state', state: room })
-  }, [room, partnerConnected])
+    guestConnection?.send({ type: 'state', state: room })
+  }, [room, guestConnection])
 
-  return { status, code, room, partnerConnected, dispatch }
+  return { status, code, room, partnerConnected: guestConnection !== null, dispatch }
 }

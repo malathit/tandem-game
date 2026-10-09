@@ -297,16 +297,18 @@ describe('joining a game that is not there, or is full', () => {
     expect(guest.ui.getByLabelText('Game code')).toBeInTheDocument()
   })
 
-  it('turns away a third device while the guest is connected', async () => {
+  it('lets the partner back in on a new connection before the host noticed the old one die', async () => {
     const user = userEvent.setup()
     const network = createMemoryNetwork()
     const host = await createGame(network, user)
-    await joinGame(network, user, host.code)
+    const guest = await joinGame(network, user, host.code)
     await reviewing(host)
 
-    const intruder = await startJoining(network, user, host.code)
-    expect(await intruder.ui.findByRole('alert')).toHaveTextContent(/connection .* lost/i)
+    const returning = await startJoining(network, user, host.code)
+    expect(await returning.ui.findByRole('heading', { name: 'Review your sentences' })).toBeInTheDocument()
+    expect(await guest.ui.findByRole('alert')).toHaveTextContent(/connection .* lost/i)
     expect(host.ui.getByRole('heading', { name: 'Review your sentences' })).toBeInTheDocument()
+    expect(host.ui.queryByText(/partner is disconnected/i)).not.toBeInTheDocument()
   })
 })
 
