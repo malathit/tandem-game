@@ -43,16 +43,24 @@ function wrap(connection: DataConnection, dispose: () => void = () => {}): Conne
 function openRoom(PeerCtor: PeerClass, code: string): Promise<Room> {
   return new Promise((resolve, reject) => {
     const peer = new PeerCtor(ID_PREFIX + code)
+    let opened = false
     const timer = setTimeout(() => fail(new Error('timeout')), TIMEOUT_MS)
 
     function fail(error: unknown) {
+      // Once the room is open the code is already handed out, so a later error must not take it down.
+      if (opened) return
       clearTimeout(timer)
       peer.destroy()
       reject(error)
     }
 
-    peer.on('error', fail) // after the room is open this is a no-op: the promise has settled
+    peer.on('error', fail)
+    // The matchmaker connection dropped; the code only works again once it is back.
+    peer.on('disconnected', () => {
+      if (opened && !peer.destroyed) peer.reconnect()
+    })
     peer.on('open', () => {
+      opened = true
       clearTimeout(timer)
       resolve({
         code,

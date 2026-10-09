@@ -46,6 +46,7 @@ const { FakePeer, FakeConnection } = vi.hoisted(() => {
     static instances: FakePeer[] = []
     id: string | undefined
     destroyed = false
+    reconnects = 0
     connections: FakeConnection[] = []
     constructor(id?: string) {
       super()
@@ -60,6 +61,9 @@ const { FakePeer, FakeConnection } = vi.hoisted(() => {
     }
     destroy() {
       this.destroyed = true
+    }
+    reconnect() {
+      this.reconnects++
     }
   }
   return { FakePeer, FakeConnection }
@@ -154,6 +158,38 @@ describe('peerNetwork.createRoom', () => {
     stop()
     peer.emit('connection', new FakeConnection())
     expect(received).toHaveLength(1)
+  })
+
+  it('keeps the room open when the matchmaker has a problem after it opened', async () => {
+    const pending = peerNetwork.createRoom()
+    const peer = await nextPeer(1)
+    peer.emit('open')
+    await pending
+
+    peer.emit('error', { type: 'network' })
+    peer.emit('error', { type: 'server-error' })
+    expect(peer.destroyed).toBe(false)
+  })
+
+  it('reconnects to the matchmaker when the connection drops after it opened', async () => {
+    const pending = peerNetwork.createRoom()
+    const peer = await nextPeer(1)
+    peer.emit('open')
+    await pending
+
+    peer.emit('disconnected')
+    expect(peer.reconnects).toBe(1)
+  })
+
+  it('does not reconnect a room that was closed', async () => {
+    const pending = peerNetwork.createRoom()
+    const peer = await nextPeer(1)
+    peer.emit('open')
+    const room = await pending
+
+    room.close()
+    peer.emit('disconnected')
+    expect(peer.reconnects).toBe(0)
   })
 
   it('closes the peer when the room is closed', async () => {
