@@ -54,6 +54,16 @@ function start() {
 }
 
 describe('useRoundSetup', () => {
+  it('asks for stored sentences by default and for fresh ones when told to', () => {
+    const { result, pending } = start()
+    act(() => result.current.choose(preset))
+    expect(pending.map((p) => p.request.fresh)).toEqual([false, false])
+
+    pending.length = 0
+    act(() => result.current.choose(preset, undefined, true))
+    expect(pending.map((p) => p.request.fresh)).toEqual([true, true])
+  })
+
   it('starts by letting the host choose', () => {
     const { result } = renderHook(() => useRoundSetup(pair, manualGenerator().generator))
     expect(result.current.state).toEqual({ phase: 'choosing' })

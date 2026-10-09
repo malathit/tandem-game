@@ -164,7 +164,7 @@ describe('round options', () => {
       await user.click(host.ui.getByRole('button', { name: 'Play again' }))
       await host.ui.findByRole('heading', { name: 'Review your sentences' })
       await waitFor(() => expect(asked).toHaveLength(2))
-      expect(asked.every((request) => request.count === 2 && request.fresh === false)).toBe(true)
+      expect(asked.every((request) => request.count === 2 && request.fresh === true)).toBe(true)
     })
   })
 })

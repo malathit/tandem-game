@@ -92,7 +92,7 @@ describe('SoloGame', () => {
     await user.click(ui.getByRole('button', { name: 'Play again' }))
     await ui.findByRole('heading', { name: 'Review your sentences' })
     expect(asked).toHaveLength(2)
-    expect(asked[1]).toMatchObject({ language: 'de', topic: { kind: 'preset', id: 'greetings' }, })
+    expect(asked[1]).toMatchObject({ language: 'de', topic: { kind: 'preset', id: 'greetings' }, fresh: true })
   })
 
   it('goes back to the topics with Change topic, keeping the options, and plays the new topic', async () => {

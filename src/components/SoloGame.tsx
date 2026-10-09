@@ -81,7 +81,7 @@ export function SoloGame({ languages, settings, generator, onLeave }: SoloGamePr
             onPlayAgain={() => {
               // Review again, so the topic gets new sentences rather than the same ones.
               setRound(null)
-              choose(round.topic, options)
+              choose(round.topic, options, true)
             }}
           />
         </>

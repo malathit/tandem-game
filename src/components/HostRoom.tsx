@@ -179,7 +179,7 @@ export function HostRoom({ network, languages, hostKnows, hostLearns, firstRound
           onPlayAgain={() => {
             // Review again, so the topic gets new sentences rather than the same ones.
             dispatch({ type: 'CHANGE_TOPIC' })
-            setup.choose(round.topic, options)
+            setup.choose(round.topic, options, true)
           }}
         />
       </>

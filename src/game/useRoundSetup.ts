@@ -93,14 +93,14 @@ export function useRoundSetup(
     [generator, pair, solo, stop],
   )
 
-  /** `topic` is a preset's id or the text the host typed. */
+  /** `topic` is a preset's id or the text the host typed. `fresh` skips sentences the Worker has already stored. */
   const choose = useCallback(
-    (topic: string, options: RoundOptions = DEFAULT_ROUND_OPTIONS) => {
+    (topic: string, options: RoundOptions = DEFAULT_ROUND_OPTIONS, fresh = false) => {
       if (!generator || pair === null) return
       const isPreset = source.getTopics().some((preset) => preset.id === topic)
       const chosen: GenerateTopic = isPreset ? { kind: 'preset', id: topic } : { kind: 'custom', text: topic }
       setState({ phase: 'preview', topic: chosen, options, turns: [], busy: true, error: null })
-      void run(chosen, options, false)
+      void run(chosen, options, fresh)
     },
     [generator, pair, run, source],
   )

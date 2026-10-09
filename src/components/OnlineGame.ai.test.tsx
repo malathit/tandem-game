@@ -217,6 +217,7 @@ describe('hosting with AI sentences', () => {
     await user.click(host.ui.getByRole('button', { name: 'Play again' }))
     await host.ui.findByRole('heading', { name: 'Review your sentences' })
     await waitFor(() => expect(asked).toHaveLength(4))
+    expect(asked.slice(2).every((request) => request.fresh)).toBe(true)
     await guest.ui.findByRole('heading', { name: 'Review your sentences' })
     await confirmSentences(host, guest, user)
     await guest.ui.findByText('Turn 1 of 4')
