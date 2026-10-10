@@ -1,11 +1,13 @@
-import type { LanguageCode } from '../content/types'
+import type { PlayerLanguages } from '../content/types'
 import type { Turn } from '../game/buildTurns'
 import { createGame, gameReducer } from '../game/gameReducer'
+import { resolvePlayers } from '../game/resolvePlayers'
 import type { GenerationErrorKind } from '../generation/types'
 import type { RoomState } from './protocol'
 
 export type RoomEvent =
-  | { type: 'GUEST_HELLO'; knows: LanguageCode }
+  /** The guest is in, with the languages they saved (null if they sent none); the host decides what each player gets. */
+  | { type: 'GUEST_HELLO'; languages: PlayerLanguages | null }
   /** The host's view of the sentences being generated or reviewed. */
   | { type: 'REVIEW_UPDATED'; topic: string; turns: Turn[]; busy: boolean; error: GenerationErrorKind | null }
   | { type: 'REVIEW_CLOSED' }
@@ -24,9 +26,9 @@ export type RoomEvent =
  * already failed), so the guest's first view after joining says what is happening instead of waiting for a choice
  * the host has already made.
  */
-export const createRoom = (hostKnows: LanguageCode, firstTopic?: string, canGenerate = true): RoomState => ({
-  hostKnows,
-  guestKnows: null,
+export const createRoom = (host: PlayerLanguages, firstTopic?: string, canGenerate = true): RoomState => ({
+  host,
+  guest: null,
   review:
     firstTopic === undefined
       ? null
@@ -45,11 +47,12 @@ export const createRoom = (hostKnows: LanguageCode, firstTopic?: string, canGene
 export function roomReducer(state: RoomState, event: RoomEvent): RoomState {
   switch (event.type) {
     case 'GUEST_HELLO':
-      if (state.guestKnows !== null || event.knows === state.hostKnows) return state
-      return { ...state, guestKnows: event.knows }
+      // The first hello decides the game; a guest coming back, or another one, plays with what was decided.
+      if (state.guest !== null) return state
+      return { ...state, guest: resolvePlayers(state.host, event.languages)[1] }
 
     case 'REVIEW_UPDATED': {
-      if (state.guestKnows === null || state.round !== null) return state
+      if (state.guest === null || state.round !== null) return state
       const { review } = state
       const { topic, turns, busy, error } = event
       if (review && review.topic === topic && review.turns === turns && review.busy === busy && review.error === error) {
@@ -81,7 +84,7 @@ export function roomReducer(state: RoomState, event: RoomEvent): RoomState {
       return { ...state, review: { ...state.review, confirmed: [state.review.confirmed[0], false] } }
 
     case 'START_ROUND':
-      if (state.guestKnows === null || event.turns.length === 0) return state
+      if (state.guest === null || event.turns.length === 0) return state
       return { ...state, review: null, round: { topic: event.topic, game: createGame(event.turns) } }
 
     case 'CHANGE_TOPIC':

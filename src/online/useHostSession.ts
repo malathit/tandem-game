@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
-import type { LanguageCode } from '../content/types'
+import type { PlayerLanguages } from '../content/types'
 import type { Connection, Network, Room } from './network'
 import { parseGuestMessage, type RoomState } from './protocol'
 import { createRoom, roomReducer, type RoomEvent } from './roomReducer'
@@ -23,9 +23,7 @@ const ignore = () => {}
  */
 export function useHostSession(
   network: Network,
-  hostKnows: LanguageCode,
-  /** The language the host is learning, which is the one the guest speaks. */
-  hostLearns: LanguageCode,
+  host: PlayerLanguages,
   /** The guest asked for new sentences; only the host's device can call the AI. */
   onGuestRegenerate: () => void = ignore,
   /** The topic whose sentences are written as soon as the guest has joined, if any. */
@@ -33,7 +31,7 @@ export function useHostSession(
   /** False in a build without AI: the guest is then told the sentences cannot be written. */
   canGenerate = true,
 ): HostSession {
-  const [room, dispatch] = useReducer(roomReducer, undefined, () => createRoom(hostKnows, firstTopic, canGenerate))
+  const [room, dispatch] = useReducer(roomReducer, undefined, () => createRoom(host, firstTopic, canGenerate))
   const [status, setStatus] = useState<HostSession['status']>('opening')
   const [code, setCode] = useState<string | null>(null)
   // The connection the guest is on, so a guest who rejoins gets a copy of the state on their new one.
@@ -54,11 +52,11 @@ export function useHostSession(
       const previous = guest.current
       guest.current = connection // first, so the old connection closing does not count as the guest leaving
       previous?.close()
-      // The guest speaks what the host is learning, so there is nothing for them to choose.
-      dispatch({ type: 'GUEST_HELLO', knows: hostLearns })
       connection.onMessage((raw) => {
         const message = parseGuestMessage(raw)
-        if (message?.type === 'confirm') {
+        if (message?.type === 'hello') {
+          dispatch({ type: 'GUEST_HELLO', languages: message.languages })
+        } else if (message?.type === 'confirm') {
           dispatch({ type: 'CONFIRM', from: 2 })
         } else if (message?.type === 'regenerate') {
           regenerate.current()
@@ -100,7 +98,7 @@ export function useHostSession(
       guest.current = null
       openRoom?.close()
     }
-  }, [network, hostLearns])
+  }, [network])
 
   // Send the guest a full copy whenever the state changes or the guest (re)connects.
   useEffect(() => {

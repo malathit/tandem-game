@@ -19,6 +19,9 @@ export interface Game {
 
 /** What the host sets before the invite link exists. */
 export interface Settings {
+  /** What the player speaks and learns; German and English unless said otherwise. */
+  knows?: 'de' | 'en'
+  learns?: 'de' | 'en'
   /** Typed instead of picking the preset `TOPIC`. */
   customTopic?: string
   count?: number
@@ -28,13 +31,13 @@ export interface Settings {
 }
 
 /**
- * The settings every first visit begins with, after the tutorial is skipped: German spoken, English learned, and the round options in `settings`.
+ * The settings every first visit begins with, after the tutorial is skipped: German spoken, English learned (unless `settings` says otherwise), and the round options in `settings`.
  * Saving them leads to the start screen.
  */
 export async function saveSettings(page: Page, settings: Settings = {}) {
   await page.getByRole('button', { name: 'Skip tutorial' }).click()
-  await page.getByLabel('I speak').selectOption('de')
-  await page.getByLabel("I'm learning").selectOption('en')
+  await page.getByLabel('I speak').selectOption(settings.knows ?? 'de')
+  await page.getByLabel("I'm learning").selectOption(settings.learns ?? 'en')
   if (settings.count !== undefined) await page.getByLabel(/^Sentences/).selectOption(String(settings.count))
   if (settings.difficulty !== undefined) await page.getByLabel('Difficulty').selectOption(settings.difficulty)
   if (settings.review ?? true) await page.getByLabel('Review sentences before the round').check()
@@ -61,10 +64,13 @@ export async function startGame(browser: Browser, settings: Settings = {}, ready
   const code = (await host.getByText(/^[0-9]{6}$/).textContent()) ?? ''
   await ready?.(host)
 
+  // The guest saves their own settings first (a first visit is asked for them), so each learns what the other speaks.
   const guest = await (await browser.newContext()).newPage()
+  await guest.goto(SITE_URL)
+  await saveSettings(guest, { knows: 'en', learns: 'de', review: false })
   await guest.goto(`${SITE_URL}?join=${code}`)
   // Connecting goes through the public PeerJS broker, so allow it some time; on failure, show what the guest saw.
-  // The guest has nothing to choose: once connected, the host sets their language and the review begins.
+  // Once connected, the guest's languages go to the host and the review begins.
   await expect(
     guest.getByRole('heading', { name: SETUP_HEADING }),
     `the guest's screen: ${await guest.locator('main').innerText()}`,

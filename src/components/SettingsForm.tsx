@@ -54,7 +54,7 @@ export function SettingsForm({ languages, defaults, onSave, onBack }: SettingsFo
             </select>
           </label>
           <small id={`${id}-knows`} className="help">
-            The language your sentences are written in. Your partner practises it.
+            The language your sentences are written in.
           </small>
         </div>
         <div className="field">
@@ -76,8 +76,8 @@ export function SettingsForm({ languages, defaults, onSave, onBack }: SettingsFo
             </select>
           </label>
           <small id={`${id}-learns`} className="help">
-            The language you say each sentence in. It is also the language your partner speaks, so they join with
-            nothing to set up.
+            The language you say each sentence in. If your partner saved the same two languages as you, you both read
+            the first and say the second. Otherwise you learn the language your partner speaks.
           </small>
         </div>
         {knows !== '' && learns !== '' && (

@@ -48,8 +48,8 @@ export async function chooseTopic(device: ReturnType<typeof open>, user: User, c
 }
 
 /**
- * A device that creates a game, speaking German (so learning English), with the topic and options in `choices`
- * (a preset topic and the default options unless said otherwise). Resolves once the code is shown.
+ * A device that creates a game, speaking German and learning English unless `languages` says otherwise, with the topic
+ * and options in `choices` (a preset topic and the default options unless said otherwise). Resolves once the code is shown.
  * It gets a generator that answers at once; pass `null` for a build without AI.
  */
 export async function createGame(
@@ -57,6 +57,7 @@ export async function createGame(
   user: User,
   generator: SentenceGenerator | null = instantGenerator().generator,
   choices: HostChoices = {},
+  languages: Pick<HostDefaults, 'knows' | 'learns'> = SAVED_DEFAULTS,
 ) {
   const { count, difficulty, review } = choices
   const options = {
@@ -64,7 +65,7 @@ export async function createGame(
     difficulty: difficulty ?? DEFAULT_ROUND_OPTIONS.difficulty,
     review: review ?? true,
   }
-  const device = open(network, generator ?? undefined, { ...SAVED_DEFAULTS, options })
+  const device = open(network, generator ?? undefined, { ...languages, options })
   await user.click(device.ui.getByRole('button', { name: '2 players' }))
   await user.click(device.ui.getByRole('button', { name: 'Create a game' }))
   await chooseTopic(device, user, choices)
@@ -73,8 +74,11 @@ export async function createGame(
   return { ...device, code }
 }
 
-export async function startJoining(network: MemoryNetwork, user: User, code: string) {
-  const device = open(network)
+/** What a guest has saved unless a test says otherwise: speaking English, learning German, so they and the default host learn each other's language. */
+export const GUEST_DEFAULTS: HostDefaults = { ...SAVED_DEFAULTS, knows: 'en', learns: 'de' }
+
+export async function startJoining(network: MemoryNetwork, user: User, code: string, saved: HostDefaults | null = GUEST_DEFAULTS) {
+  const device = open(network, undefined, saved)
   await user.click(device.ui.getByRole('button', { name: '2 players' }))
   await user.click(device.ui.getByRole('button', { name: 'Join a game' }))
   await user.type(device.ui.getByLabelText('Game code'), code)

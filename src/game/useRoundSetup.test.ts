@@ -4,8 +4,8 @@ import { GenerationError, type SentenceGenerator } from '../generation/generator
 import type { GeneratedSentences, GenerateRequest, GenerationErrorKind } from '../generation/types'
 import { useRoundSetup } from './useRoundSetup'
 
-// The host learns English, the guest German.
-const pair = ['en', 'de'] as const
+// The host speaks German and learns English, the guest the other way round.
+const players = [{ knows: 'de', learns: 'en' }, { knows: 'en', learns: 'de' }] as const
 const german = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.']
 const english = ['She can swim very well.', 'They should try harder today.']
 
@@ -39,7 +39,7 @@ const preset = 'greetings'
 /** A hook whose host has chosen the preset and been shown the AI's first sentences. */
 async function previewing() {
   const manual = manualGenerator()
-  const { result } = renderHook(() => useRoundSetup(pair, manual.generator))
+  const { result } = renderHook(() => useRoundSetup(players, manual.generator))
   act(() => result.current.choose(preset))
   act(() => manual.answerAll())
   await waitFor(() => expect(result.current.state).toMatchObject({ phase: 'preview', busy: false }))
@@ -49,7 +49,7 @@ async function previewing() {
 /** A hook with nothing chosen yet. */
 function start() {
   const manual = manualGenerator()
-  const { result } = renderHook(() => useRoundSetup(pair, manual.generator))
+  const { result } = renderHook(() => useRoundSetup(players, manual.generator))
   return { ...manual, result }
 }
 
@@ -65,7 +65,7 @@ describe('useRoundSetup', () => {
   })
 
   it('starts by letting the host choose', () => {
-    const { result } = renderHook(() => useRoundSetup(pair, manualGenerator().generator))
+    const { result } = renderHook(() => useRoundSetup(players, manualGenerator().generator))
     expect(result.current.state).toEqual({ phase: 'choosing' })
   })
 
@@ -81,7 +81,7 @@ describe('useRoundSetup', () => {
   describe('choosing a preset topic', () => {
     it('asks the AI for both languages straight away and previews the result', async () => {
       const { generator, pending, answerAll } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
+      const { result } = renderHook(() => useRoundSetup(players, generator))
       act(() => result.current.choose(preset))
 
       expect(result.current.state).toMatchObject({ phase: 'preview', topic: { kind: 'preset', id: preset }, busy: true, turns: [] })
@@ -99,14 +99,14 @@ describe('useRoundSetup', () => {
 
     it('treats text that is not a preset id as a custom topic', () => {
       const { generator, pending } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
+      const { result } = renderHook(() => useRoundSetup(players, generator))
       act(() => result.current.choose('greetings and more'))
       expect(result.current.state).toMatchObject({ topic: { kind: 'custom', text: 'greetings and more' } })
       expect(pending.every((p) => p.request.topic.kind === 'custom')).toBe(true)
     })
 
     it('does nothing without a generator', () => {
-      const { result } = renderHook(() => useRoundSetup(pair, undefined))
+      const { result } = renderHook(() => useRoundSetup(players, undefined))
       act(() => result.current.choose(preset))
       act(() => result.current.choose('my pet dragon'))
       expect(result.current.state).toEqual({ phase: 'choosing' })
@@ -174,7 +174,7 @@ describe('useRoundSetup', () => {
 
     it('treats an unexpected failure as the service being unavailable', async () => {
       const generator: SentenceGenerator = { generate: () => Promise.reject(new Error('boom')) }
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
+      const { result } = renderHook(() => useRoundSetup(players, generator))
       act(() => result.current.choose(preset))
       await waitFor(() => expect(result.current.state).toMatchObject({ error: 'unavailable' }))
     })
@@ -231,7 +231,7 @@ describe('useRoundSetup', () => {
 
     it('goes back to choosing when there is nothing to fall back on', () => {
       const { generator } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
+      const { result } = renderHook(() => useRoundSetup(players, generator))
       act(() => result.current.choose('my pet dragon'))
       act(() => result.current.cancel())
       expect(result.current.state).toEqual({ phase: 'choosing' })
@@ -241,7 +241,7 @@ describe('useRoundSetup', () => {
   describe('a custom topic', () => {
     it('generates straight away and previews the result', async () => {
       const { generator, pending, answerAll } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
+      const { result } = renderHook(() => useRoundSetup(players, generator))
       act(() => result.current.choose('my pet dragon'))
       expect(result.current.state).toMatchObject({
         phase: 'preview', topic: { kind: 'custom', text: 'my pet dragon' }, busy: true, turns: [],
@@ -254,7 +254,7 @@ describe('useRoundSetup', () => {
 
     it('reports a failure with nothing to show, so the host can try again or choose another topic', async () => {
       const { generator, failAll } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
+      const { result } = renderHook(() => useRoundSetup(players, generator))
       act(() => result.current.choose('my pet dragon'))
       act(() => failAll('invalid'))
       await waitFor(() => expect(result.current.state).toMatchObject({ busy: false, error: 'invalid', turns: [] }))
@@ -264,7 +264,7 @@ describe('useRoundSetup', () => {
   describe('leaving', () => {
     it('back() stops any request and returns to choosing', () => {
       const { generator, pending } = manualGenerator()
-      const { result } = renderHook(() => useRoundSetup(pair, generator))
+      const { result } = renderHook(() => useRoundSetup(players, generator))
       act(() => result.current.choose(preset))
       act(() => result.current.regenerate())
       act(() => result.current.back())
@@ -274,7 +274,7 @@ describe('useRoundSetup', () => {
 
     it('stops the request when the screen goes away', () => {
       const { generator, pending } = manualGenerator()
-      const { result, unmount } = renderHook(() => useRoundSetup(pair, generator))
+      const { result, unmount } = renderHook(() => useRoundSetup(players, generator))
       act(() => result.current.choose(preset))
       act(() => result.current.regenerate())
       unmount()
@@ -284,7 +284,7 @@ describe('useRoundSetup', () => {
     it('does not update after unmounting when a late answer arrives', async () => {
       const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const { generator, answerAll } = manualGenerator()
-      const { result, unmount } = renderHook(() => useRoundSetup(pair, generator))
+      const { result, unmount } = renderHook(() => useRoundSetup(players, generator))
       act(() => result.current.choose(preset))
       act(() => result.current.regenerate())
       unmount()
@@ -295,9 +295,36 @@ describe('useRoundSetup', () => {
   })
 })
 
+describe('useRoundSetup when both players speak the same language', () => {
+  const bothGerman = [{ knows: 'de', learns: 'en' }, { knows: 'de', learns: 'en' }] as const
+  const moreGerman = ['Wir fahren morgen nach Berlin.', 'Sie hat einen kleinen Hund.']
+
+  it('asks for German twice, the second time for new sentences, and gives each player different sentences to translate into English', async () => {
+    const manual = manualGenerator()
+    const { result } = renderHook(() => useRoundSetup(bothGerman, manual.generator))
+    act(() => result.current.choose(preset, { count: 2, difficulty: 'medium', review: true }))
+
+    expect(manual.pending.map((p) => [p.request.language, p.request.fresh])).toEqual([['de', false], ['de', true]])
+    act(() => {
+      const [first, second] = manual.pending.splice(0)
+      first.resolve({ sentences: german, translations: english })
+      second.resolve({ sentences: moreGerman, translations: english })
+    })
+    await waitFor(() => expect(result.current.state).toMatchObject({ phase: 'preview', busy: false }))
+
+    const { state } = result.current
+    if (state.phase !== 'preview') throw new Error('expected a preview')
+    expect(state.turns.map((turn) => [turn.player, turn.learning])).toEqual([[1, 'en'], [2, 'en'], [1, 'en'], [2, 'en']])
+    const texts = state.turns.map((turn) => turn.sentence.text)
+    expect(new Set(texts).size).toBe(4)
+    expect(texts.sort()).toEqual([...german, ...moreGerman].sort())
+  })
+})
+
 describe('useRoundSetup for one player', () => {
-  // The player speaks German and learns English: [what they learn, what they speak].
-  const solo = ['en', 'de'] as const
+  // The player speaks German and learns English; the second player is not used.
+  const me = { knows: 'de', learns: 'en' } as const
+  const solo = [me, me] as const
   const options = { count: 2, difficulty: 'medium', review: true } as const
 
   function startSolo() {
@@ -362,7 +389,7 @@ describe('useRoundSetup without a review', () => {
 
   function start(onSkipReview = vi.fn()) {
     const manual = manualGenerator()
-    const { result } = renderHook(() => useRoundSetup(pair, manual.generator, { onSkipReview }))
+    const { result } = renderHook(() => useRoundSetup(players, manual.generator, { onSkipReview }))
     return { ...manual, result, onSkipReview }
   }
 

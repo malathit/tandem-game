@@ -24,6 +24,15 @@ export interface Sentence {
 
 export type LanguagePair = readonly [LanguageCode, LanguageCode]
 
+/** What a player reads their sentences in, and what they translate them into. */
+export interface PlayerLanguages {
+  knows: LanguageCode
+  learns: LanguageCode
+}
+
+/** The two players of a game: [Player 1, Player 2]. */
+export type Players = readonly [PlayerLanguages, PlayerLanguages]
+
 /** What screens need to know about the game's content: its languages and preset topics. */
 export interface ContentSource {
   getLanguages(): Language[]

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { parseGuestMessage, parseHostMessage, type RoomState } from './protocol'
 
 const roomState: RoomState = {
-  hostKnows: 'en',
-  guestKnows: 'de',
+  host: { knows: 'en', learns: 'de' },
+  guest: { knows: 'de', learns: 'en' },
   review: null,
   round: {
     topic: 'modal-verbs',
@@ -38,9 +38,27 @@ describe('parseGuestMessage', () => {
     expect(parseGuestMessage({ type: 'next-turn', extra: 'x' })).toEqual({ type: 'next-turn' })
   })
 
+  describe('hello', () => {
+    it('carries the languages the guest saved', () => {
+      expect(parseGuestMessage({ type: 'hello', languages: { knows: 'de', learns: 'en', extra: 'x' } })).toEqual({
+        type: 'hello',
+        languages: { knows: 'de', learns: 'en' },
+      })
+    })
+
+    it.each([
+      ['no languages', { type: 'hello' }],
+      ['only one language', { type: 'hello', languages: { knows: 'de' } }],
+      ['an unknown language', { type: 'hello', languages: { knows: 'de', learns: 'xx' } }],
+      ['languages that are not text', { type: 'hello', languages: { knows: 1, learns: {} } }],
+      ['languages that are not an object', { type: 'hello', languages: 'de' }],
+      ['the same language twice', { type: 'hello', languages: { knows: 'de', learns: 'de' } }],
+    ])('is accepted with no languages when it has %s', (_name, raw) => {
+      expect(parseGuestMessage(raw)).toEqual({ type: 'hello', languages: null })
+    })
+  })
+
   it.each([
-    // The guest no longer says which language it speaks: the host decides.
-    [{ type: 'hello', knows: 'de' }],
     [{ type: 'explode' }],
     [{}],
     ['next-turn'],
@@ -76,13 +94,18 @@ describe('parseHostMessage', () => {
     expect(parsed?.state.round?.game.turns[0].sentence).toEqual({ id: 'a', text: 'x', translation: 'y' })
   })
 
+  it('accepts a state where both players read and learn the same languages', () => {
+    const same = { ...roomState, guest: roomState.host }
+    expect(parseHostMessage({ type: 'state', state: same })).toEqual({ type: 'state', state: same })
+  })
+
   it('accepts a lobby state with no guest and no round', () => {
-    const lobby = { hostKnows: 'en', guestKnows: null, round: null, review: null }
+    const lobby = { host: { knows: 'en', learns: 'de' }, guest: null, round: null, review: null }
     expect(parseHostMessage({ type: 'state', state: lobby })).toEqual({ type: 'state', state: lobby })
   })
 
   it('accepts a state from a host that does not know about reviews yet, as having none', () => {
-    const old = { hostKnows: 'en', guestKnows: 'de', round: null }
+    const old = { host: roomState.host, guest: roomState.guest, round: null }
     expect(parseHostMessage({ type: 'state', state: old })?.state.review).toBeNull()
   })
 
@@ -121,9 +144,13 @@ describe('parseHostMessage', () => {
   })
 
   it.each([
-    ['unknown host language', { ...roomState, hostKnows: 'xx' }],
-    ['unknown guest language', { ...roomState, guestKnows: 'xx' }],
-    ['missing guest language', { hostKnows: 'en', round: null }],
+    ['an unknown host language', { ...roomState, host: { knows: 'xx', learns: 'de' } }],
+    ['a host who reads and learns the same language', { ...roomState, host: { knows: 'en', learns: 'en' } }],
+    ['no host languages', { ...roomState, host: undefined }],
+    ['an unknown guest language', { ...roomState, guest: { knows: 'de', learns: 'xx' } }],
+    ['a guest who reads and learns the same language', { ...roomState, guest: { knows: 'de', learns: 'de' } }],
+    ['a guest that is neither languages nor null', { ...roomState, guest: 'de' }],
+    ['a missing guest', { host: roomState.host, round: null }],
     ['a game status that does not exist', withRound({ status: 'paused' })],
     ['a turn index past the end', withRound({ index: 2 })],
     ['a game in progress with no turns', withRound({ turns: [], index: 0 })],

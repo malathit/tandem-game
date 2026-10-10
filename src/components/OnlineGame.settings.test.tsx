@@ -1,7 +1,7 @@
 import { render, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { loadHostDefaults, loadLastTopic, saveLastTopic } from '../game/hostPreferences'
+import { loadHostDefaults, loadLastTopic, saveHostDefaults, saveLastTopic } from '../game/hostPreferences'
 import { OnlineGame } from './OnlineGame'
 import { SAVED_DEFAULTS, languages, open } from '../test/devices'
 import { instantGenerator } from '../test/generators'
@@ -132,22 +132,31 @@ describe('joining through an invite link', () => {
     return within(view.container)
   }
 
-  it('does not ask a guest for settings', async () => {
+  it('joins at once for a guest who has saved settings', async () => {
+    saveHostDefaults(saved)
     const ui = openInvite()
     expect(await ui.findByRole('alert')).toHaveTextContent(/couldn't find a game/i) // it tried to join
     expect(ui.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument()
   })
 
-  it('asks for them if that guest then goes on to create a game, and returns there once they are saved', async () => {
+  it('asks a guest without settings for them first, saves them and then joins', async () => {
     const user = userEvent.setup()
     const ui = openInvite()
-    await user.click(await ui.findByRole('button', { name: 'Leave game' }))
-    await user.click(ui.getByRole('button', { name: 'Create a game' }))
     expect(ui.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+    expect(ui.queryByRole('alert')).not.toBeInTheDocument()
 
     await user.selectOptions(ui.getByLabelText('I speak'), 'en')
     await user.selectOptions(ui.getByLabelText("I'm learning"), 'de')
     await user.click(ui.getByRole('button', { name: 'Save settings' }))
-    expect(ui.getByRole('heading', { name: 'Create a game' })).toBeInTheDocument()
+
+    expect(loadHostDefaults()).toMatchObject({ knows: 'en', learns: 'de' })
+    expect(await ui.findByRole('alert')).toHaveTextContent(/couldn't find a game/i) // it tried to join
+  })
+
+  it('goes back to the menu from the settings without joining', async () => {
+    const user = userEvent.setup()
+    const ui = openInvite()
+    await user.click(ui.getByRole('button', { name: 'Back' }))
+    expect(ui.getByRole('button', { name: 'Create a game' })).toBeInTheDocument()
   })
 })

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { staticSource } from '../content/staticSource'
 import type { Language } from '../content/types'
 import { createGame, gameReducer, type GameState } from '../game/gameReducer'
-import { learningPair } from '../game/learningPair'
 import { topicName } from '../game/topicName'
 import { useRoundSetup } from '../game/useRoundSetup'
 import type { SentenceGenerator } from '../generation/generator'
@@ -36,7 +35,7 @@ export function SoloGame({ languages, settings, generator, onLeave }: SoloGamePr
   const { topic: firstTopic, options: firstOptions } = settings
   // The player can swap the two languages between rounds without going back to Settings.
   const [{ knows, learns }, setLanguages] = useState({ knows: settings.knows, learns: settings.learns })
-  const setup = useRoundSetup(learningPair(knows, learns), generator, {
+  const setup = useRoundSetup([{ knows, learns }, { knows, learns }], generator, {
     solo: true,
     onSkipReview: (topic, turns) => setRound({ topic: topicText(topic), game: createGame(turns) }),
   })

@@ -126,8 +126,10 @@ export async function generateForLanguage(
 }
 
 /**
- * Generates the sentences for both languages of a round at the same time.
- * If one language fails, the other request is cancelled and that error is thrown.
+ * Generates the sentences for the languages two players read, at the same time.
+ * If one request fails, the other is cancelled and that error is thrown.
+ * When both read the same language it is asked for twice (the second time `fresh`) and the batches are joined, without
+ * repeats, so there are enough sentences for both players.
  */
 export async function generateForPair(
   generator: SentenceGenerator,
@@ -139,22 +141,38 @@ export async function generateForPair(
 ): Promise<SentencesByLanguage> {
   if (signal?.aborted) throw new GenerationError('cancelled')
 
+  const [first, second] = pair
+  const same = first === second
+  const requests = pair.map((language, i) => ({ language, fresh: fresh || (same && i === 1) }))
+
   const controller = new AbortController()
   const cancel = () => controller.abort()
   signal?.addEventListener('abort', cancel, { once: true })
   try {
-    const entries = await Promise.all(
-      pair.map(async (language) => {
+    const batches = await Promise.all(
+      requests.map(async (request) => {
         try {
-          return [language, await generateForLanguage(generator, language, topic, fresh, options, controller.signal)] as const
+          return await generateForLanguage(generator, request.language, topic, request.fresh, options, controller.signal)
         } catch (error) {
           controller.abort()
           throw error
         }
       }),
     )
-    return Object.fromEntries(entries)
+    return same ? { [first]: joinBatches(first, batches) } : { [first]: batches[0], [second]: batches[1] }
   } finally {
     signal?.removeEventListener('abort', cancel)
   }
+}
+
+/** One list from several batches of the same language: a sentence the model wrote twice is kept once, and ids stay unique. */
+function joinBatches(language: LanguageCode, batches: readonly Sentence[][]): Sentence[] {
+  const seen = new Set<string>()
+  return batches
+    .flat()
+    .filter(({ text }) => {
+      const key = text.trim().toLowerCase()
+      return !seen.has(key) && seen.add(key)
+    })
+    .map((sentence, i) => ({ ...sentence, id: `ai-${language}-${i + 1}` }))
 }

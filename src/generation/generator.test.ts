@@ -265,6 +265,62 @@ describe('generateForPair', () => {
   })
 })
 
+describe('generateForPair when both players read the same language', () => {
+  const topic = { kind: 'custom', text: 'my pet dragon' } as const
+  const options: GenerationOptions = { count: 2, difficulty: 'medium' }
+  const batch = (...texts: string[]): GeneratedSentences => ({ sentences: texts, translations: texts.map((text) => `${text} (translated)`) })
+  const answers = (...batches: GeneratedSentences[]) => {
+    const asked: GenerateRequest[] = []
+    const generate = async (req: GenerateRequest) => {
+      asked.push(req)
+      return batches[asked.length - 1]
+    }
+    return { asked, generator: { generate } satisfies SentenceGenerator }
+  }
+
+  it('asks twice for that language, the second time for new sentences, and joins the answers', async () => {
+    const { asked, generator } = answers(batch('Eins.', 'Zwei.'), batch('Drei.', 'Vier.'))
+    const result = await generateForPair(generator, ['de', 'de'], topic, false, options)
+
+    expect(asked.map((req) => [req.language, req.fresh])).toEqual([['de', false], ['de', true]])
+    expect(Object.keys(result)).toEqual(['de'])
+    expect(result.de?.map((s) => s.text)).toEqual(['Eins.', 'Zwei.', 'Drei.', 'Vier.'])
+  })
+
+  it('keeps a sentence once when both answers have it, whatever its case', async () => {
+    const { generator } = answers(batch('Eins.', 'Zwei.'), batch('zwei. ', 'Drei.'))
+    const result = await generateForPair(generator, ['de', 'de'], topic, false, options)
+    expect(result.de?.map((s) => s.text)).toEqual(['Eins.', 'Zwei.', 'Drei.'])
+  })
+
+  it('gives every sentence its own id and keeps its translation', async () => {
+    const { generator } = answers(batch('Eins.', 'Zwei.'), batch('Drei.', 'Vier.'))
+    const result = await generateForPair(generator, ['de', 'de'], topic, false, options)
+    expect(result.de?.map((s) => s.id)).toEqual(['ai-de-1', 'ai-de-2', 'ai-de-3', 'ai-de-4'])
+    expect(result.de?.[2].translation).toBe('Drei. (translated)')
+  })
+
+  it('asks for new sentences both times when the caller wants new ones', async () => {
+    const { asked, generator } = answers(batch('Eins.'), batch('Zwei.'))
+    await generateForPair(generator, ['en', 'en'], topic, true, options)
+    expect(asked.every((req) => req.fresh)).toBe(true)
+  })
+
+  it('fails when either request fails, and cancels the other', async () => {
+    let otherSignal: AbortSignal | undefined
+    let calls = 0
+    const generator: SentenceGenerator = {
+      generate: (_req, signal) => {
+        if (++calls === 1) return Promise.reject(new GenerationError('limit-reached'))
+        otherSignal = signal
+        return new Promise<GeneratedSentences>(() => {})
+      },
+    }
+    expect(await kindOf(generateForPair(generator, ['de', 'de'], topic, false, options))).toBe('limit-reached')
+    expect(otherSignal?.aborted).toBe(true)
+  })
+})
+
 describe('generateForLanguage', () => {
   const german = ['Ich kann gut schwimmen.', 'Er muss seine Hausaufgaben machen.']
   const topic = { kind: 'custom', text: 'my pet dragon' } as const

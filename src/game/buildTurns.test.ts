@@ -13,8 +13,10 @@ const sentences = {
 const keepOrder = <T>(items: readonly T[]) => [...items]
 const reverse = <T>(items: readonly T[]) => [...items].reverse()
 
-// pair = [what Player 1 is learning, what Player 2 is learning]
-const pair = ['en', 'de'] as const
+// Player 1 speaks German and learns English; Player 2 the other way round.
+const pair = [{ knows: 'de', learns: 'en' }, { knows: 'en', learns: 'de' }] as const
+// Both speak German and learn English.
+const bothGerman = [{ knows: 'de', learns: 'en' }, { knows: 'de', learns: 'en' }] as const
 
 describe('buildTurns', () => {
   it('alternates between the players, two sentences each', () => {
@@ -67,6 +69,41 @@ describe('buildTurns', () => {
   it('does not change the lists it is given', () => {
     buildTurns(pair, sentences)
     expect(sentences.en.map((s) => s.id)).toEqual(['en1', 'en2', 'en3', 'en4'])
+  })
+})
+
+describe('buildTurns when both players read the same language', () => {
+  const german = { de: make('de', 6) }
+
+  it('gives both players German sentences to translate into English, alternating', () => {
+    const turns = buildTurns(bothGerman, german, 2, keepOrder)
+    expect(turns.map((t) => [t.player, t.learning, t.sentence.id])).toEqual([
+      [1, 'en', 'de1'],
+      [2, 'en', 'de2'],
+      [1, 'en', 'de3'],
+      [2, 'en', 'de4'],
+    ])
+  })
+
+  it('never gives the same sentence to two turns', () => {
+    for (let run = 0; run < 50; run++) {
+      const ids = buildTurns(bothGerman, german, 3).map((t) => t.sentence.id)
+      expect(ids).toHaveLength(6)
+      expect(new Set(ids).size).toBe(6)
+    }
+  })
+
+  it('keeps the turns balanced when the list is short', () => {
+    expect(buildTurns(bothGerman, { de: make('de', 5) }, 5, keepOrder).map((t) => t.player)).toEqual([1, 2, 1, 2])
+    expect(buildTurns(bothGerman, { de: make('de', 1) }, 5, keepOrder)).toEqual([])
+  })
+
+  it('uses the shuffle it is given', () => {
+    expect(buildTurns(bothGerman, german, 1, reverse).map((t) => t.sentence.id)).toEqual(['de6', 'de5'])
+  })
+
+  it('returns no turns without sentences in that language', () => {
+    expect(buildTurns(bothGerman, { en: make('en', 6) })).toEqual([])
   })
 })
 

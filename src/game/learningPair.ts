@@ -1,4 +1,4 @@
-import type { LanguageCode, LanguagePair } from '../content/types'
+import type { LanguagePair, Players } from '../content/types'
 
-/** Each player learns the language their partner speaks: [what Player 1 learns, what Player 2 learns]. */
-export const learningPair = (hostKnows: LanguageCode, guestKnows: LanguageCode): LanguagePair => [guestKnows, hostKnows]
+/** What each player translates into: [what Player 1 learns, what Player 2 learns]. */
+export const learningPair = ([first, second]: Players): LanguagePair => [first.learns, second.learns]

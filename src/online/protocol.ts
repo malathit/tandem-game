@@ -1,4 +1,4 @@
-import { isLanguageCode, type LanguageCode } from '../content/types'
+import { isLanguageCode, type PlayerLanguages } from '../content/types'
 import type { Turn } from '../game/buildTurns'
 import type { GameState } from '../game/gameReducer'
 import { GENERATION_ERROR_KINDS, type GenerationErrorKind } from '../generation/types'
@@ -17,9 +17,9 @@ export interface ReviewState {
 
 /** Everything both devices need to show the same screen. The host owns it. */
 export interface RoomState {
-  hostKnows: LanguageCode
-  /** null until the guest has joined; then the language the host is learning. */
-  guestKnows: LanguageCode | null
+  host: PlayerLanguages
+  /** null until the guest has joined; then what they read and translate into, which the host decided (see `resolvePlayers`). */
+  guest: PlayerLanguages | null
   /** The sentences being checked; null unless the host has chosen a topic and no round is running. */
   review: ReviewState | null
   /** null while the host is choosing a topic or the players are reviewing. */
@@ -29,6 +29,8 @@ export interface RoomState {
 export type HostMessage = { type: 'state'; state: RoomState }
 
 export type GuestMessage =
+  /** The guest's saved settings, sent once they are connected; null when they are missing or unusable. */
+  | { type: 'hello'; languages: PlayerLanguages | null }
   | { type: 'confirm' }
   | { type: 'regenerate' }
   | { type: 'next-turn' }
@@ -45,6 +47,12 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const isText = (value: unknown): value is string =>
   typeof value === 'string' && value.trim() !== '' && value.length <= MAX_TEXT_LENGTH
+
+/** What a player reads and translates into; the two must differ. */
+function parseLanguages(raw: unknown): PlayerLanguages | null {
+  if (!isRecord(raw) || !isLanguageCode(raw.knows) || !isLanguageCode(raw.learns) || raw.knows === raw.learns) return null
+  return { knows: raw.knows, learns: raw.learns }
+}
 
 function parseTurn(raw: unknown): Turn | null {
   if (!isRecord(raw) || (raw.player !== 1 && raw.player !== 2) || !isLanguageCode(raw.learning)) {
@@ -106,13 +114,15 @@ function parseReview(raw: unknown): ReviewState | null {
 }
 
 function parseRoomState(raw: unknown): RoomState | null {
-  if (!isRecord(raw) || !isLanguageCode(raw.hostKnows)) return null
-  const { guestKnows, round } = raw
-  if (guestKnows !== null && !isLanguageCode(guestKnows)) return null
+  if (!isRecord(raw)) return null
+  const host = parseLanguages(raw.host)
+  const { round } = raw
+  const guest = raw.guest === null ? null : parseLanguages(raw.guest)
+  if (host === null || (raw.guest !== null && guest === null)) return null
   // A host that has not been updated yet sends no review, which means there is none.
   const review = raw.review === undefined || raw.review === null ? null : parseReview(raw.review)
   if (raw.review !== undefined && raw.review !== null && review === null) return null
-  const common = { hostKnows: raw.hostKnows, guestKnows, review }
+  const common = { host, guest, review }
   if (round === null) return { ...common, round: null }
   if (!isRecord(round) || !isText(round.topic)) return null
   const game = parseGame(round.game)
@@ -127,6 +137,7 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
 
 export function parseGuestMessage(raw: unknown): GuestMessage | null {
   if (!isRecord(raw)) return null
+  if (raw.type === 'hello') return { type: 'hello', languages: parseLanguages(raw.languages) }
   if (raw.type === 'next-turn') return { type: 'next-turn' }
   if (raw.type === 'reveal') return { type: 'reveal' }
   if (raw.type === 'confirm') return { type: 'confirm' }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { PlayerLanguages } from '../content/types'
 import { NetworkError, type Connection, type Network } from './network'
 import { parseHostMessage, type GuestMessage, type RoomState } from './protocol'
 
@@ -14,11 +15,16 @@ export interface GuestSession {
   reveal: () => void
 }
 
-/** Joins a room and shows whatever the host says the game looks like. */
-export function useGuestSession(network: Network, code: string): GuestSession {
+/**
+ * Joins a room and shows whatever the host says the game looks like.
+ * `languages` are the guest's saved settings, which the host uses to decide what each player reads and learns.
+ */
+export function useGuestSession(network: Network, code: string, languages: PlayerLanguages): GuestSession {
   const [status, setStatus] = useState<GuestSession['status']>('connecting')
   const [room, setRoom] = useState<RoomState | null>(null)
   const host = useRef<Connection | null>(null)
+  // Read once, when the connection opens: changing settings mid-game does not change the game.
+  const saved = useRef(languages)
 
   useEffect(() => {
     let cancelled = false
@@ -30,6 +36,7 @@ export function useGuestSession(network: Network, code: string): GuestSession {
           return
         }
         host.current = connection
+        connection.send({ type: 'hello', languages: saved.current } satisfies GuestMessage)
         connection.onMessage((raw) => {
           const message = parseHostMessage(raw)
           if (message) setRoom(message.state)

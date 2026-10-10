@@ -14,12 +14,12 @@ Your saved settings (language you speak, language you are learning, number of se
 
 ### Saved settings
 
-The first time you open the site, you are asked to save your settings: the language you speak (your sentences are written in it, and your partner practises it), the language you are learning (it is also the language your partner speaks), the number of sentences and the difficulty. Each setting is explained on that page. They live in this browser's `localStorage` and are never sent anywhere; clearing site data resets them. "Settings" on the first screen opens them again. "1 player" and "Create a game" show them as a summary with your last topic, so you only choose a topic; "Edit settings" opens the settings page and returns to the summary after saving. Someone who opens an invite link is not asked for settings.
+The first time you open the site, you are asked to save your settings: the language you speak (your sentences are written in it), the language you are learning, the number of sentences and the difficulty. Each setting is explained on that page. They live in this browser's `localStorage`; clearing site data resets them. In a two-player game only the two languages are sent, to your partner's device. "Settings" on the first screen opens them again. "1 player" and "Create a game" show them as a summary with your last topic, so you only choose a topic; "Edit settings" opens the settings page and returns to the summary after saving. Someone who opens an invite link without saved settings is asked for them before joining.
 
 ### With a partner (2 players)
 
 1. One player chooses "Create a game", checks the summary of their saved settings (editing them if needed) and picks a topic (one of ten everyday ones, or their own).
-2. They send their partner the invite link (or the 6-digit code). The partner just joins: they speak the language the host is learning, so there is nothing for them to choose.
+2. They send their partner the invite link (or the 6-digit code). The partner joins with their own saved settings, and the game picks the mode from both players' languages: if they speak and learn the same two languages (say, both speak German and learn English), both read German sentences and translate them into English; otherwise each learns what the other speaks, using the host's languages.
 3. An AI writes the sentences. Each player reviews the ones they will read aloud (in their own language) and either can ask for new ones. The round starts when both tap "Looks good". By default the review is skipped and the round starts as soon as the sentences are written; turn on "Review sentences before the round" in the settings to check them first.
 4. Take turns translating aloud; your partner judges. The speaker taps "Show translation" when done, or "Next turn" to skip it.
 

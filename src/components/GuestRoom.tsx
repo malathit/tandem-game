@@ -1,5 +1,5 @@
 import { staticSource } from '../content/staticSource'
-import type { Language } from '../content/types'
+import type { Language, PlayerLanguages } from '../content/types'
 import { learningPair } from '../game/learningPair'
 import { topicName } from '../game/topicName'
 import type { Network } from '../online/network'
@@ -13,6 +13,8 @@ import { Waiting } from './Waiting'
 interface GuestRoomProps {
   network: Network
   languages: Language[]
+  /** What this guest saved: the host uses it to decide what each player reads and learns. */
+  saved: PlayerLanguages
   code: string
   onRetry: () => void
   onChangeCode: () => void
@@ -26,8 +28,8 @@ const PROBLEMS: Record<Exclude<GuestSession['status'], 'connecting' | 'connected
 }
 
 /** The device that joined: it is Player 2 and shows what the host says is happening. */
-export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onLeave }: GuestRoomProps) {
-  const { status, room, confirm, regenerate, nextTurn, reveal } = useGuestSession(network, code)
+export function GuestRoom({ network, languages, saved, code, onRetry, onChangeCode, onLeave }: GuestRoomProps) {
+  const { status, room, confirm, regenerate, nextTurn, reveal } = useGuestSession(network, code, saved)
 
   function renderBody() {
     if (status === 'connecting') {
@@ -57,8 +59,8 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
         </section>
       )
     }
-    // The host sets the guest's language when they join, so the first copy of the room already has it.
-    if (room === null || room.guestKnows === null) {
+    // The host decides the guest's languages when the guest says hello, so the first copy of the room already has them.
+    if (room === null || room.guest === null) {
       return (
         <Waiting slow="The host's game is still starting. If this goes on, ask them to check their connection.">
           Connected. Waiting for the host to start the game…
@@ -66,9 +68,9 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
       )
     }
 
-    const { guestKnows, round } = room
+    const { round } = room
 
-    const pair = learningPair(room.hostKnows, guestKnows)
+    const pair = learningPair([room.host, room.guest])
     if (round === null) {
       const { review } = room
       return (
@@ -101,7 +103,7 @@ export function GuestRoom({ network, languages, code, onRetry, onChangeCode, onL
     )
   }
 
-  const step = room === null || room.guestKnows === null ? 1 : room.round === null ? 2 : 3
+  const step = room === null || room.guest === null ? 1 : room.round === null ? 2 : 3
 
   return (
     <>

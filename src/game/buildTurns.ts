@@ -1,4 +1,4 @@
-import type { LanguageCode, LanguagePair, Sentence } from '../content/types'
+import type { LanguageCode, Players, Sentence } from '../content/types'
 import { DEFAULT_COUNT } from '../generation/types'
 
 export interface Turn {
@@ -26,26 +26,34 @@ export const shuffled: Shuffle = (items) => {
 
 /**
  * Builds the turns of one round, alternating Player 1 and Player 2.
- * `pair` is [language Player 1 is learning, language Player 2 is learning] (see `learningPair`), so
- * Player 1 reads sentences in `pair[1]` (their native language) and vice versa.
+ * Each player reads sentences in their native language and translates them into the one they are learning. When both
+ * read the same language, the one list is dealt out between them so nobody gets a sentence the other has read.
  * Each player gets `perPlayer` turns, fewer if a sentence list is shorter.
  */
 export function buildTurns(
-  pair: LanguagePair,
+  players: Players,
   sentences: SentencesByLanguage,
   perPlayer: number = DEFAULT_COUNT,
   shuffle: Shuffle = shuffled,
 ): Turn[] {
-  const [learnedByPlayer1, learnedByPlayer2] = pair
-  const forPlayer1 = shuffle(sentences[learnedByPlayer2] ?? [])
-  const forPlayer2 = shuffle(sentences[learnedByPlayer1] ?? [])
+  const [player1, player2] = players
+  const [forPlayer1, forPlayer2] =
+    player1.knows === player2.knows
+      ? dealOut(shuffle(sentences[player1.knows] ?? []))
+      : [shuffle(sentences[player1.knows] ?? []), shuffle(sentences[player2.knows] ?? [])]
   const turnsEach = Math.min(perPlayer, forPlayer1.length, forPlayer2.length)
 
   return Array.from({ length: turnsEach }).flatMap((_, i): Turn[] => [
-    { player: 1, sentence: forPlayer1[i], learning: learnedByPlayer1 },
-    { player: 2, sentence: forPlayer2[i], learning: learnedByPlayer2 },
+    { player: 1, sentence: forPlayer1[i], learning: player1.learns },
+    { player: 2, sentence: forPlayer2[i], learning: player2.learns },
   ])
 }
+
+/** Splits a list between two players, every other sentence each. */
+const dealOut = <T>(items: readonly T[]): [T[], T[]] => [
+  items.filter((_, i) => i % 2 === 0),
+  items.filter((_, i) => i % 2 === 1),
+]
 
 /**
  * Builds the turns of a solo round: every turn is Player 1's, reading `sentences` (written in their native language)

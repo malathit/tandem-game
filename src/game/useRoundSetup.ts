@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { staticSource } from '../content/staticSource'
-import type { ContentSource, LanguagePair } from '../content/types'
+import type { ContentSource, Players } from '../content/types'
 import { GenerationError, generateForLanguage, generateForPair, type SentenceGenerator } from '../generation/generator'
 import { DEFAULT_ROUND_OPTIONS, type GenerateTopic, type GenerationErrorKind, type RoundOptions } from '../generation/types'
 import { buildSoloTurns, buildTurns, type Turn } from './buildTurns'
@@ -32,11 +32,11 @@ interface RoundSetupOptions {
 /**
  * The host's side of starting a round: pick a topic, review the AI's sentences (unless `options.review` is off),
  * optionally ask for new ones.
- * `pair` is null until the partner has joined, and nothing can be chosen before then.
- * With `solo`, `pair` is [what the player learns, what they speak] and there is no partner.
+ * `players` is null until the partner has joined, and nothing can be chosen before then.
+ * With `solo`, only the first player counts and there is no partner.
  */
 export function useRoundSetup(
-  pair: LanguagePair | null,
+  players: Players | null,
   generator: SentenceGenerator | undefined,
   { solo = false, source = staticSource, onSkipReview }: RoundSetupOptions = {},
 ) {
@@ -56,18 +56,22 @@ export function useRoundSetup(
 
   const run = useCallback(
     async (topic: GenerateTopic, options: RoundOptions, fresh: boolean) => {
-      if (!generator || pair === null) return
+      if (!generator || players === null) return
       stop()
       const mine = new AbortController()
       current.current = mine
       try {
         const turns = solo
           ? buildSoloTurns(
-              pair[0],
-              await generateForLanguage(generator, pair[1], topic, fresh, options, mine.signal),
+              players[0].learns,
+              await generateForLanguage(generator, players[0].knows, topic, fresh, options, mine.signal),
               options.count,
             )
-          : buildTurns(pair, await generateForPair(generator, pair, topic, fresh, options, mine.signal), options.count)
+          : buildTurns(
+              players,
+              await generateForPair(generator, [players[0].knows, players[1].knows], topic, fresh, options, mine.signal),
+              options.count,
+            )
         if (mine.signal.aborted) return
         if (!options.review && skipReview.current) {
           setState(choosing)
@@ -90,19 +94,19 @@ export function useRoundSetup(
         if (current.current === mine) current.current = null
       }
     },
-    [generator, pair, solo, stop],
+    [generator, players, solo, stop],
   )
 
   /** `topic` is a preset's id or the text the host typed. `fresh` skips sentences the Worker has already stored. */
   const choose = useCallback(
     (topic: string, options: RoundOptions = DEFAULT_ROUND_OPTIONS, fresh = false) => {
-      if (!generator || pair === null) return
+      if (!generator || players === null) return
       const isPreset = source.getTopics().some((preset) => preset.id === topic)
       const chosen: GenerateTopic = isPreset ? { kind: 'preset', id: topic } : { kind: 'custom', text: topic }
       setState({ phase: 'preview', topic: chosen, options, turns: [], busy: true, error: null })
       void run(chosen, options, fresh)
     },
-    [generator, pair, run, source],
+    [generator, players, run, source],
   )
 
   /** Ask the AI for a new set of sentences for the topic being previewed. */

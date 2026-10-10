@@ -4,7 +4,7 @@ import { DEFAULT_ROUND_OPTIONS, MAX_COUNT, MIN_COUNT, isDifficulty, type RoundOp
 
 /** What the host keeps from game to game: the language they speak, the one they learn, and the round options. */
 export interface HostDefaults {
-  /** What the host can teach: their sentences are written in it, and their partner practises it. */
+  /** What the player reads: their sentences are written in it. */
   knows: LanguageCode
   /** What the host practises: it is the language the partner speaks. Never the same as `knows`. */
   learns: LanguageCode

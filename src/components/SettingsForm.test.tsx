@@ -64,7 +64,7 @@ describe('SettingsForm', () => {
   it('explains every setting', () => {
     setup()
     expect(screen.getByLabelText('I speak')).toHaveAccessibleDescription(/your sentences are written in/i)
-    expect(screen.getByLabelText("I'm learning")).toHaveAccessibleDescription(/the language your partner speaks/i)
+    expect(screen.getByLabelText("I'm learning")).toHaveAccessibleDescription(/learn the language your partner speaks/i)
     expect(screen.getByLabelText('Sentences per player')).toHaveAccessibleDescription(/reads aloud in a round/i)
     expect(screen.getByLabelText('Difficulty')).toHaveAccessibleDescription(/Easy: .*4 to 7 words.*Medium: .*Hard: .*8 to 11 words/)
   })

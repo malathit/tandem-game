@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { learningPair } from './learningPair'
 
 describe('learningPair', () => {
-  it('has the host learn the guest\'s language and the guest learn the host\'s', () => {
-    expect(learningPair('de', 'en')).toEqual(['en', 'de'])
+  it('is what each player learns, in player order', () => {
+    expect(learningPair([{ knows: 'de', learns: 'en' }, { knows: 'en', learns: 'de' }])).toEqual(['en', 'de'])
+  })
+
+  it('is the same language twice when both players learn it', () => {
+    expect(learningPair([{ knows: 'de', learns: 'en' }, { knows: 'de', learns: 'en' }])).toEqual(['en', 'en'])
   })
 })

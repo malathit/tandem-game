@@ -45,6 +45,7 @@ describe('App', () => {
 
 describe('opening an invite link', () => {
   it('tries to join the game in the link and removes the code from the address bar', async () => {
+    saveHostDefaults(SAVED_DEFAULTS)
     window.history.replaceState(null, '', '/?join=999999')
     render(<App network={createMemoryNetwork()} />)
 

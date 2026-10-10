@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { staticSource } from '../content/staticSource'
-import type { Language, LanguageCode } from '../content/types'
+import type { Language, PlayerLanguages, Players } from '../content/types'
 import type { SentenceGenerator } from '../generation/generator'
 import type { GenerateTopic, RoundOptions } from '../generation/types'
 import { learningPair } from '../game/learningPair'
@@ -26,8 +26,8 @@ const topicText = (topic: GenerateTopic) => (topic.kind === 'preset' ? topic.id 
 interface HostRoomProps {
   network: Network
   languages: Language[]
-  hostKnows: LanguageCode
-  hostLearns: LanguageCode
+  /** What the host reads and translates into; the guest's languages are decided once they have joined. */
+  host: PlayerLanguages
   /** The topic and options the host set before the game was opened; its sentences are written once the partner is in. */
   firstRound: { topic: string; options: RoundOptions }
   /** Where the AI's sentences come from; without it there is nothing to play. */
@@ -36,20 +36,20 @@ interface HostRoomProps {
 }
 
 /** The device that created the game: it is Player 1 and runs the game for both. */
-export function HostRoom({ network, languages, hostKnows, hostLearns, firstRound, generator, onLeave }: HostRoomProps) {
+export function HostRoom({ network, languages, host, firstRound, generator, onLeave }: HostRoomProps) {
   // The guest can ask for new sentences, but the request is made from here, so the session calls back.
   const guestRegenerate = useRef(() => {})
   const { status, code, room, partnerConnected, dispatch } = useHostSession(
     network,
-    hostKnows,
-    hostLearns,
+    host,
     () => guestRegenerate.current(),
     firstRound.topic,
     generator !== undefined,
   )
-  const { guestKnows, round } = room
-  const pair = guestKnows === null ? null : learningPair(room.hostKnows, guestKnows)
-  const setup = useRoundSetup(pair, generator, {
+  const { round } = room
+  const players = useMemo((): Players | null => (room.guest === null ? null : [room.host, room.guest]), [room.host, room.guest])
+  const pair = players === null ? null : learningPair(players)
+  const setup = useRoundSetup(players, generator, {
     onSkipReview: (topic, turns) => dispatch({ type: 'START_ROUND', topic: topicText(topic), turns }),
   })
   const { state: setupState, back: backToTopics } = setup

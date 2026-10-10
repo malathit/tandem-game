@@ -7,24 +7,28 @@ const turns: Turn[] = [
   { player: 2, sentence: { id: 'b', text: 'b', translation: 'b!' }, learning: 'de' },
 ]
 
-const joined = roomReducer(createRoom('en'), { type: 'GUEST_HELLO', knows: 'de' })
+const host = { knows: 'en', learns: 'de' } as const
+const guest = { knows: 'de', learns: 'en' } as const
+const hello = { type: 'GUEST_HELLO', languages: guest } as const
+
+const joined = roomReducer(createRoom(host), hello)
 const playing = roomReducer(joined, { type: 'START_ROUND', topic: 'modal-verbs', turns })
 
 describe('createRoom', () => {
   it('starts with only the host in it', () => {
-    expect(createRoom('en')).toEqual({ hostKnows: 'en', guestKnows: null, round: null, review: null })
+    expect(createRoom(host)).toEqual({ host, guest: null, round: null, review: null })
   })
 })
 
 describe('a room that already knows its first topic', () => {
   it('starts with that topic\'s sentences on the way, so the joining guest never sees an empty room', () => {
-    const room = createRoom('en', 'weather')
+    const room = createRoom(host, 'weather')
     expect(room.review).toEqual({ topic: 'weather', turns: [], busy: true, error: null, confirmed: [false, false] })
-    expect(roomReducer(room, { type: 'GUEST_HELLO', knows: 'de' }).review).toEqual(room.review)
+    expect(roomReducer(room, hello).review).toEqual(room.review)
   })
 
   it('starts out as a failed review when the host cannot generate sentences at all', () => {
-    expect(createRoom('en', 'weather', false).review).toEqual({
+    expect(createRoom(host, 'weather', false).review).toEqual({
       topic: 'weather',
       turns: [],
       busy: false,
@@ -34,23 +38,30 @@ describe('a room that already knows its first topic', () => {
   })
 
   it('lets the real review replace it, and clears it like any other', () => {
-    const joinedRoom = roomReducer(createRoom('en', 'weather'), { type: 'GUEST_HELLO', knows: 'de' })
+    const joinedRoom = roomReducer(createRoom(host, 'weather'), hello)
     expect(roomReducer(joinedRoom, { type: 'REVIEW_CLOSED' }).review).toBeNull()
   })
 })
 
 describe('GUEST_HELLO', () => {
-  it('records the language the guest speaks', () => {
-    expect(joined.guestKnows).toBe('de')
+  it('gives the guest the languages they saved when they match the host in either way', () => {
+    expect(joined.guest).toEqual(guest)
+    const same = roomReducer(createRoom(host), { type: 'GUEST_HELLO', languages: host })
+    expect(same.guest).toEqual(host)
   })
 
-  it('ignores a guest who wants to learn the same language as the host', () => {
-    const room = createRoom('en')
-    expect(roomReducer(room, { type: 'GUEST_HELLO', knows: 'en' })).toBe(room)
+  it('has the guest speak what the host learns when they saved nothing', () => {
+    expect(roomReducer(createRoom(host), { type: 'GUEST_HELLO', languages: null }).guest).toEqual(guest)
   })
 
-  it('ignores a second hello once the guest has chosen', () => {
-    expect(roomReducer(joined, { type: 'GUEST_HELLO', knows: 'en' })).toBe(joined)
+  it("uses the host's languages for a guest whose own match neither way", () => {
+    const odd = { knows: 'en', learns: 'en' } as const
+    expect(roomReducer(createRoom(host), { type: 'GUEST_HELLO', languages: odd }).guest).toEqual(guest)
+  })
+
+  it('ignores a second hello once the game has been decided, even with different languages', () => {
+    expect(roomReducer(joined, { type: 'GUEST_HELLO', languages: host })).toBe(joined)
+    expect(roomReducer(joined, { type: 'GUEST_HELLO', languages: null })).toBe(joined)
   })
 })
 
@@ -63,7 +74,7 @@ describe('START_ROUND', () => {
   })
 
   it('needs a guest first', () => {
-    const room = createRoom('en')
+    const room = createRoom(host)
     expect(roomReducer(room, { type: 'START_ROUND', topic: 't', turns })).toBe(room)
   })
 
@@ -124,7 +135,7 @@ describe('PREVIOUS_TURN', () => {
 describe('CHANGE_TOPIC', () => {
   it('goes back to topic choice and keeps both languages', () => {
     const room = roomReducer(playing, { type: 'CHANGE_TOPIC' })
-    expect(room).toEqual({ hostKnows: 'en', guestKnows: 'de', round: null, review: null })
+    expect(room).toEqual({ host, guest, round: null, review: null })
   })
 })
 
@@ -159,7 +170,7 @@ describe('reviewing the sentences', () => {
     })
 
     it('needs a guest first, and does nothing once a round is running', () => {
-      const alone = createRoom('en')
+      const alone = createRoom(host)
       expect(roomReducer(alone, update)).toBe(alone)
       expect(roomReducer(playing, update)).toBe(playing)
     })

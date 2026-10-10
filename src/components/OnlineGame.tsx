@@ -39,7 +39,8 @@ interface OnlineGameProps {
 export function OnlineGame({ network, languages, initialCode, generator }: OnlineGameProps) {
   const [defaults, setDefaults] = useState(loadHostDefaults)
   const [lastTopic, setLastTopic] = useState(loadLastTopic)
-  // A guest has nothing to set up. Anyone else is first shown the tutorial, then asked to save their settings.
+  // Someone with an invite link joins at once (asking for their settings first if they have none). Anyone else is first
+  // shown the tutorial, then asked to save their settings.
   const [stage, setStage] = useState<Stage>(() =>
     initialCode
       ? { kind: 'guest', code: initialCode, attempt: 1 }
@@ -155,8 +156,7 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
         <HostRoom
           network={network}
           languages={languages}
-          hostKnows={stage.settings.knows}
-          hostLearns={stage.settings.learns}
+          host={{ knows: stage.settings.knows, learns: stage.settings.learns }}
           firstRound={stage.settings}
           generator={generator}
           onLeave={toMenu}
@@ -175,12 +175,15 @@ export function OnlineGame({ network, languages, initialCode, generator }: Onlin
       )
 
     case 'guest':
+      // The settings are what the host uses to decide what each player reads, so a guest without any sets them first.
+      if (defaults === null) return settingsScreen(stage, toMenu)
       return (
         <GuestRoom
           // A new key makes React start a fresh connection attempt.
           key={stage.attempt}
           network={network}
           languages={languages}
+          saved={{ knows: defaults.knows, learns: defaults.learns }}
           code={stage.code}
           onRetry={() => setStage({ ...stage, attempt: stage.attempt + 1 })}
           onChangeCode={() => setStage({ kind: 'join-setup' })}
